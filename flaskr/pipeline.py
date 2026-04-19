@@ -133,6 +133,12 @@ def load_config():
     # 获取项目根目录路径
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     config_path = os.path.join(base_dir, 'config.yaml')
+
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(
+            "config.yaml 文件未找到。如需使用 DeepSeek 精排，请在项目根目录创建 config.yaml 并配置 API Key。\n"
+            "若仅测试功能，可忽略此提示，系统将自动回退至 User-CF 协同过滤排序。"
+        )
     
     with open(config_path, 'r', encoding='utf-8') as f:
         config = yaml.safe_load(f)
@@ -149,7 +155,7 @@ def rank_with_deepseek(candidates_dict, user_rates_df, movies_df, top_k=12, appl
         user_rates_df: 用户评分DataFrame
         movies_df: 电影元数据DataFrame
         top_k: 最终返回的电影数量
-        apply_rerank: 是否在精排后应用多样性重排（阶段四功能，可先设为False测试）
+        apply_rerank: 是否在精排后应用多样性重排
     
     返回:
         (ranked_movie_ids, reasoning): 排序后的movieId列表和排序理由
@@ -169,17 +175,17 @@ def rank_with_deepseek(candidates_dict, user_rates_df, movies_df, top_k=12, appl
     
     user_profile = ""
     if len(high_rated_movies) > 0:
-        user_profile = "用户高评分电影：\n"
+        user_profile = "user high-rated movies:\n"
         for _, row in high_rated_movies.head(5).iterrows():
             genres_str = ', '.join(row['genres'][:3])
-            user_profile += f"- {row['title']} (类型: {genres_str})\n"
+            user_profile += f"- {row['title']} (type: {genres_str})\n"
     else:
         rated_movies = movies_df[movies_df['movieId'].isin(user_rates_df['movieId'].tolist())]
         if len(rated_movies) > 0:
-            user_profile = "用户评分过的电影：\n"
+            user_profile = "user rated movies:\n"
             for _, row in rated_movies.head(5).iterrows():
                 genres_str = ', '.join(row['genres'][:3])
-                user_profile += f"- {row['title']} (类型: {genres_str})\n"
+                user_profile += f"- {row['title']} (type: {genres_str})\n"
     
     # ---------- 3. 构建候选电影列表 ----------
     candidate_ids = list(candidates_dict.keys())
@@ -199,8 +205,8 @@ def rank_with_deepseek(candidates_dict, user_rates_df, movies_df, top_k=12, appl
         if isinstance(overview, str):
             overview = overview[:200] + "..." if len(overview) > 200 else overview
         else:
-            overview = "暂无概述"
-        candidate_list += f"ID:{row['movieId']} | {row['title']} | 类型:{genres_str} | 概述:{overview}\n"
+            overview = "No overview available"
+        candidate_list += f"ID:{row['movieId']} | {row['title']} | type:{genres_str} | overview:{overview}\n"
     
     # ---------- 4. 构建 Prompt ----------
     system_prompt = """You are a movie recommendation assistant. Based on the user's profile and the candidate movie list, you need to select the top K movies that best match the user's preferences. Consider factors such as genre similarity, user ratings, and diversity of recommendations.
@@ -292,12 +298,12 @@ def rerank_diversity(ranked_ids, movies_df, max_same_genre=2):
     
     while remaining:
         found = False
-        # 获取最近 (max_same_genre-1) 部已选电影的主要类型
-        recent_genres = [get_primary_genre(mid) for mid in result[-(max_same_genre-1):]]
+        # 获取最近 (max_same_genre) 部已选电影的主要类型
+        recent_genres = [get_primary_genre(mid) for mid in result[-max_same_genre:]]
         
         for i, mid in enumerate(remaining):
             genre = get_primary_genre(mid)
-            if recent_genres.count(genre) < max_same_genre - 1:
+            if recent_genres.count(genre) < max_same_genre:
                 result.append(remaining.pop(i))
                 found = True
                 break
