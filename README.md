@@ -49,7 +49,7 @@ deepseek:
 
 关闭多样性
 main.py 文件下：
-# Modify this function
+Modify this function
 def getRecommendationBy(user_rates):
 ....
 ranked_ids, reasoning = pipeline.rank_with_deepseek(
