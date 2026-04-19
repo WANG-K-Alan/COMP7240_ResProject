@@ -130,7 +130,20 @@ def load_config():
     加载项目根目录下的 config.yaml 文件
     返回配置字典
     """
-    # 获取项目根目录路径
+    # 优先从环境变量读取 DeepSeek API Key
+    api_key = os.environ.get('DEEPSEEK_API_KEY')
+    model = os.environ.get('DEEPSEEK_MODEL', 'deepseek-chat')
+
+    if api_key:
+        # 使用环境变量配置
+        return {
+            'deepseek': {
+                'api_key': api_key,
+                'model': model
+            }
+        }
+
+    # 回退到 本地config.yaml 文件配置
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     config_path = os.path.join(base_dir, 'config.yaml')
 
