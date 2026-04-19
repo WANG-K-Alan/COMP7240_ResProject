@@ -1,6 +1,6 @@
 ## This branck is add the industry pipeline for this recommendation program with deepseek rank
 ## Upgrade the original recommendation system based on single collaborative filtering (KNN) to a three-layer pipeline architecture that meets industry standards: multi recall → big language model ranking → diversity reordering.
-
+‘’‘
 User Rating Data
       │
       ▼
@@ -33,7 +33,7 @@ User Rating Data
       │
       ▼
    Final Recommendation List (12 movies)
-
+’‘’
 ## Create an environment
 
 ```
