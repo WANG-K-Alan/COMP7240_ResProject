@@ -34,6 +34,30 @@ User Rating Data
       ▼
    Final Recommendation List (12 movies)
 ```
+## add a new Python lib：
+## pip install openai pyyaml
+
+## 如果你要测试大模型精排部分，你需要这个
+deepseek:
+  api_key: "sk-你的API密钥"
+  model: "deepseek-chat
+## 讲此部分放入项目根目录与flaskr并排的config.yaml文件中, 我默认了读取此文件, 读取不到后面的流程会降级到 User-CF 协同过滤排序
+
+关闭多样性
+main.py 文件下：
+# Modify this function
+def getRecommendationBy(user_rates):
+....
+ranked_ids, reasoning = pipeline.rank_with_deepseek(
+                candidates_dict, user_rates_df, movies, top_k=12, apply_rerank=True ////此处改为False 关闭多样性重排
+            )
+....
+
+## change a TF-IDF and Type tags (Multi Hot) mixed similarity recommendation in: 
+# Modify this function
+def getLikedSimilarBy(user_likes):....
+The weighted fusion recommendation list will include works of the same genre as the favorite movies, as well as movies of different genres but related to content, enhancing diversity and interpretability.
+
 ## Create an environment
 
 ```
