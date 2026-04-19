@@ -40,7 +40,11 @@ User Rating Data
 ## 如果你要测试大模型精排部分，你需要这个
 deepseek:
   api_key: "sk-你的API密钥"
-  model: "deepseek-chat
+  model: "deepseek-chat"
+  base_url: "https://api.deepseek.com"     # 默认 API 地址
+  #调整生成参数
+  temperature: 0.5
+  max_tokens: 500
 ## 讲此部分放入项目根目录与flaskr并排的config.yaml文件中, 我默认了读取此文件, 读取不到后面的流程会降级到 User-CF 协同过滤排序
 
 关闭多样性
