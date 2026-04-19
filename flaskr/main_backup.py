@@ -1,5 +1,3 @@
-from . import pipeline
-
 from flask import (
     Blueprint, render_template, request
 )
@@ -93,30 +91,39 @@ def getMoviesByGenres(user_genres):
 # Modify this function
 def getRecommendationBy(user_rates):
     results = []
-    message = "No recommendations."
-    
     if len(user_rates) > 0:
-        user_rates_df = ratesFromUser(user_rates)
-        user_rates_df['userId'] = 611
-        
-        # 多路召回
-        candidates_dict = pipeline.multi_recall(user_rates_df, rates, movies)
-        
-        if candidates_dict:
-            # DeepSeek 精排
-            ranked_ids, reasoning = pipeline.rank_with_deepseek(
-                candidates_dict, user_rates_df, movies, top_k=12, apply_rerank=True
-            )
-            
-            if ranked_ids:
-                results = movies[movies['movieId'].isin(ranked_ids)]
-                # 保持 DeepSeek 返回的顺序
-                results = results.set_index('movieId').loc[ranked_ids].reset_index()
-                message = f"DeepSeek AI Recommendation: {reasoning}"
-    
+        # Initialize a reader with rating scale from 1 to 5
+        reader = Reader(rating_scale=(1, 5))
+        # Define the algorithm
+        algo = KNNWithMeans(sim_options={'name': 'pearson', 'user_based': True})
+        # Convert the user's ratings (stored in "user_rates") to the Dataset format
+        user_rates = ratesFromUser(user_rates)
+        # Add the user’s rating information into the Movielens dataset
+        training_rates = pd.concat([rates, user_rates], ignore_index=True)
+        # Load the combined data as a training dataset 
+        training_data = Dataset.load_from_df(training_rates, reader=reader)
+        # Build a full training set from the dataset
+        trainset = training_data.build_full_trainset()
+        # Fit the algorithm using the trainset
+        algo.fit(trainset)
+        all_movie_ids = movies['movieId'].unique()
+        # Predict ratings for all movies for the specified user (assuming user ID 611)
+        user_id = 611 
+        rated_movie_ids = user_rates[user_rates['userId'] == user_id]['movieId'].tolist()
+        predictions = [algo.predict(user_id, movie_id) for movie_id in all_movie_ids if movie_id not in rated_movie_ids]
+        top_predictions = [pred for pred in predictions]
+        # sort predicted ratings in a descending order
+        top_predictions.sort(key=lambda x: x.est, reverse=True)
+        # Select the top-K items (e.g., 12)
+        top_movie_ids = [pred.iid for pred in top_predictions[:12]]
+        results = movies[movies['movieId'].isin(top_movie_ids)]
+
+
+    # Return the result
     if len(results) > 0:
-        return results.to_dict('records'), message
-    return results, message
+        return results.to_dict('records'), "These movies are recommended based on your ratings."
+    return results, "No recommendations."
+
 
 
 # Modify this function
