@@ -1,35 +1,38 @@
 ## This branck is add the industry pipeline for this recommendation program with deepseek rank
 ## Upgrade the original recommendation system based on single collaborative filtering (KNN) to a three-layer pipeline architecture that meets industry standards: multi recall → big language model ranking → diversity reordering.
 
-用户评分数据
+User Rating Data
       │
       ▼
-┌─────────────────────────────────────┐
-│           多路召回 (Recall)          │
-│  ┌─────────┐ ┌─────────┐ ┌───────┐ │
-│  │ User-CF │ │ Item-CF │ │热门召回│ │
-│  └─────────┘ └─────────┘ └───────┘ │
-│         合并去重 → 候选池 (~300部)   │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│          Multi-Channel Recall            │
+│  ┌───────────┐ ┌───────────┐ ┌────────┐ │
+│  │ User-CF   │ │ Item-CF   │ │Popular │ │
+│  └───────────┘ └───────────┘ └────────┘ │
+│      Merge & Deduplicate → Candidate Pool│
+│               (~300 movies)              │
+└─────────────────────────────────────────┘
       │
       ▼
-┌─────────────────────────────────────┐
-│        DeepSeek LLM 精排 (Ranking)   │
-│  - 构建用户画像（高评分电影）          │
-│  - 输入候选电影元数据（标题、类型、概述）│
-│  - 语义理解 + 逻辑推理 → 个性化排序    │
-│  - 输出排序列表 + 推荐理由             │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│      DeepSeek LLM Fine-Ranking           │
+│  - Build User Profile (high-rated movies)│
+│  - Input Candidate Movie Metadata        │
+│    (title, genre, overview)              │
+│  - Semantic Understanding + Reasoning    │
+│  - Personalized Ranking                  │
+│  - Output: Ranked List + Reasons         │
+└─────────────────────────────────────────┘
       │
       ▼
-┌─────────────────────────────────────┐
-│         多样性重排 (Re-ranking)       │
-│  - 规则：连续同类型电影不超过2部        │
-│  - 提升浏览体验，避免审美疲劳           │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│        Diversity Re-ranking              │
+│  - Rule: ≤2 consecutive same genre       │
+│  - Improve browsing experience           │
+└─────────────────────────────────────────┘
       │
       ▼
-   最终推荐列表（12部）
+   Final Recommendation List (12 movies)
 
 ## Create an environment
 
