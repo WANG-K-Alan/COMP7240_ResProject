@@ -24,3 +24,4 @@ build/
 
 # 日志
 *.log
+config.yaml
