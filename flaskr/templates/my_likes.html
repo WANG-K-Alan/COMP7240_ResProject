@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Likes - Movie Recommender System</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sci-fi-style.css') }}">
+</head>
+<body>
+<div id="app">
+    <template v-if="isLoading">
+        <section class="hero is-fullheight">
+            <div class="hero-body">
+                <div class="">
+                    <p class="title">
+                        Loading...
+                    </p>
+                </div>
+            </div>
+        </section>
+    </template>
+    <template v-else>
+        <div class="container">
+            <nav :class="['navbar', 'is-active']" role="navigation" aria-label="main navigation">
+                <div class="navbar-brand">
+                    <a class="navbar-item" href="/">
+                        <span class="is-size-3">Movies Recommender System</span>
+                    </a>
+
+                    <a role="button" :class="['navbar-burger', isActivityNavBar ? 'is-active' : '']" aria-label="menu"
+                       aria-expanded="false"
+                       data-target="navbarBasicExample" @click="isActivityNavBar = !isActivityNavBar">
+                        <span aria-hidden="true"></span>
+                        <span aria-hidden="true"></span>
+                        <span aria-hidden="true"></span>
+                    </a>
+                </div>
+
+                <div id="navbarBasicExample" :class="['navbar-menu', isActivityNavBar ? 'is-active' : '']">
+                    <div class="navbar-start">
+                        <a class="navbar-item" href="/">
+                            <i class="fa fa-home mr-2"></i> Home
+                        </a>
+                        <a class="navbar-item" href="/browse">
+                            <i class="fa fa-film mr-2"></i> Browse
+                        </a>
+                        <a class="navbar-item is-active" href="/my-likes">
+                            <i class="fa fa-heart mr-2"></i> My Likes
+                        </a>
+                    </div>
+                    <div class="navbar-end">
+                        <div class="navbar-item">
+                            <div class="field has-addons mb-0">
+                                <div class="control">
+                                    <span class="button is-static">
+                                        <i class="fa fa-user mr-2"></i>User ID
+                                    </span>
+                                </div>
+                                <div class="control">
+                                    <div class="select">
+                                        <select v-model="currentUserId" @change="switchUser">
+                                            <option value="611">611</option>
+                                            <option value="612">612</option>
+                                            <option value="613">613</option>
+                                            <option value="614">614</option>
+                                            <option value="615">615</option>
+                                            <option value="616">616</option>
+                                            <option value="617">617</option>
+                                            <option value="618">618</option>
+                                            <option value="619">619</option>
+                                            <option value="620">620</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </div>
+
+        <!-- Title and action section -->
+        <section class="section pt-4 pb-2">
+            <div class="container">
+                <!-- Tabs -->
+                <div class="tabs is-boxed is-medium">
+                    <ul>
+                        <li :class="{'is-active': currentTab === 'likes'}">
+                            <a href="?tab=likes">
+                                <span class="icon is-small"><i class="fa fa-thumbs-up"></i></span>
+                                <span>Likes ([[ likesCount ]])</span>
+                            </a>
+                        </li>
+                        <li :class="{'is-active': currentTab === 'dislikes'}">
+                            <a href="?tab=dislikes">
+                                <span class="icon is-small"><i class="fa fa-thumbs-down"></i></span>
+                                <span>Dislikes ([[ dislikesCount ]])</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="level">
+                    <div class="level-left">
+                        <div class="level-item">
+                            <p class="is-size-4">
+                                [[ currentTab === 'likes' ? 'My Liked Movies' : 'My Disliked Movies' ]]
+                            </p>
+                        </div>
+                    </div>
+                    <div class="level-right">
+                        <div class="level-item">
+                            <button class="button is-info" @click="toggleSelectAll" v-if="totalCount > 0">
+                                <i class="fa fa-check-square-o mr-2"></i>
+                                [[ selectAll ? 'Deselect All' : 'Select All' ]]
+                            </button>
+                        </div>
+                        <div class="level-item">
+                            <button class="button is-warning" @click="deleteSelected" :disabled="selectedMovies.length === 0">
+                                <i class="fa fa-trash mr-2"></i>
+                                Delete Selected ([[ selectedMovies.length ]])
+                            </button>
+                        </div>
+                        <div class="level-item">
+                            <button class="button is-danger" @click="deleteAll" v-if="totalCount > 0">
+                                <i class="fa fa-trash-o mr-2"></i>
+                                Delete All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <p class="subtitle is-6">Page {{ current_page }} of {{ total_pages }} (Total: {{ total_count }} movies)</p>
+            </div>
+        </section>
+
+        <!-- Movie grid -->
+        <section class="section pt-2">
+            <div class="container">
+                {% if total_count > 0 %}
+                <div class="columns is-mobile is-multiline">
+                    {% for movie in liked_movies %}
+                    <div class="column is-2-fullhd is-2-desktop is-3-tablet is-6-mobile">
+                        <div class="card" 
+                             :class="{'selected-card': isSelected({{ movie['movieId'] }})}" 
+                             @click="handleCardClick($event, {{ movie['movieId'] }})"
+                             data-movie-id="{{ movie['movieId'] }}"
+                             data-movie-title="{{ movie['title'] }}"
+                             data-movie-year="{{ movie.get('year', 'N/A') }}"
+                             data-movie-cover="{{ movie['cover_url'] }}"
+                             data-movie-overview="{{ movie.get('overview', '') }}"
+                             data-movie-genres="{{ movie['genres'] | join('|') }}">
+                            <!-- Checkbox -->
+                            <div class="card-header p-2" @click.stop>
+                                <label class="checkbox">
+                                    <input type="checkbox" 
+                                           v-model="selectedMovies"
+                                           :value="{{ movie['movieId'] }}">
+                                    <span class="ml-2">Select</span>
+                                </label>
+                            </div>
+                            
+                            <div class="card-image">
+                                <figure class="image is-3by4">
+                                    <img src="{{ movie['cover_url'] }}"
+                                         onerror="this.src='https://placehold.co/480x640?text=No+Cover';"
+                                         alt="{{ movie['title'] }}">
+                                </figure>
+                                {% if movie['overview'] and movie['overview'] is string %}
+                                <div class="image-overlay">
+                                    <p class="overlay-text">{{ movie['overview'][:150] }}{% if movie['overview']|length > 150 %}...{% endif %}</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                                
+                                <div class="card-content p-2">
+                                    <div class="media">
+                                        <div class="media-content">
+                                            <p style="font-size: 0.8rem; font-weight: bold" class="has-text-weight-bold">
+                                                {{ movie['title'] }}
+                                            </p>
+                                            <p style="font-size: 0.7rem" class="has-text-grey">
+                                                {{ movie.get('year', 'N/A') }}
+                                            </p>
+                                            <p style="font-size: 0.7rem" class="mt-1">
+                                                {% for genre in movie['genres'][:3] %}
+                                                <span class="tag is-small is-light">{{ genre }}</span>
+                                                {% endfor %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                <div class="notification is-info">
+                    <p class="has-text-centered">
+                        <i :class="['fa', currentTab === 'likes' ? 'fa-heart-o' : 'fa-thumbs-down']" style="font-size: 3rem; margin-bottom: 1rem;"></i><br>
+                        [[ currentTab === 'likes' ? "You haven't liked any movies yet." : "You haven't disliked any movies yet." ]]<br>
+                        <a href="/browse" class="button is-primary mt-3">Browse Movies</a>
+                    </p>
+                </div>
+                {% endif %}
+
+                <!-- Pagination navigation -->
+                {% if total_pages > 1 %}
+                <nav class="pagination is-centered mt-6" role="navigation" aria-label="pagination">
+                    <!-- Previous page -->
+                    {% if current_page > 1 %}
+                    <a class="pagination-previous" href="?tab={{ current_tab }}&page={{ current_page - 1 }}">
+                        <i class="fa fa-chevron-left"></i> Previous
+                    </a>
+                    {% else %}
+                    <a class="pagination-previous" disabled>
+                        <i class="fa fa-chevron-left"></i> Previous
+                    </a>
+                    {% endif %}
+
+                    <!-- Next page -->
+                    {% if current_page < total_pages %}
+                    <a class="pagination-next" href="?tab={{ current_tab }}&page={{ current_page + 1 }}">
+                        Next <i class="fa fa-chevron-right"></i>
+                    </a>
+                    {% else %}
+                    <a class="pagination-next" disabled>
+                        Next <i class="fa fa-chevron-right"></i>
+                    </a>
+                    {% endif %}
+
+                    <!-- Page number list -->
+                    <ul class="pagination-list">
+                        {% if current_page > 3 %}
+                        <li>
+                            <a class="pagination-link" href="?tab={{ current_tab }}&page=1">1</a>
+                        </li>
+                        {% if current_page > 4 %}
+                        <li><span class="pagination-ellipsis">&hellip;</span></li>
+                        {% endif %}
+                        {% endif %}
+
+                        {% for p in range([current_page - 2, 1]|max, [current_page + 2, total_pages]|min + 1) %}
+                        <li>
+                            <a class="pagination-link {% if p == current_page %}is-current{% endif %}" 
+                               href="?tab={{ current_tab }}&page={{ p }}"
+                               {% if p == current_page %}aria-current="page"{% endif %}>
+                                {{ p }}
+                            </a>
+                        </li>
+                        {% endfor %}
+
+                        {% if current_page < total_pages - 2 %}
+                        {% if current_page < total_pages - 3 %}
+                        <li><span class="pagination-ellipsis">&hellip;</span></li>
+                        {% endif %}
+                        <li>
+                            <a class="pagination-link" href="?tab={{ current_tab }}&page={{ total_pages }}">{{ total_pages }}</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Movie details sidebar -->
+        <div :class="['modal', showSidebar ? 'is-active' : '']" @click.self="closeSidebar">
+            <div class="modal-background" @click="closeSidebar"></div>
+            <div class="modal-content" style="width: 500px; max-width: 90vw;">
+                <div class="box" style="background: var(--card-bg); border: 1px solid var(--primary-color); max-height: 90vh; overflow-y: auto;">
+                    <template v-if="selectedMovie">
+                        <!-- Close button -->
+                        <button class="delete is-large" style="position: absolute; top: 10px; right: 10px;" @click="closeSidebar"></button>
+                        
+                        <!-- Movie poster -->
+                        <figure class="image is-3by4 mb-4">
+                            <img :src="selectedMovie.cover_url" 
+                                 @error="$event.target.src='https://placehold.co/480x640?text=No+Cover'"
+                                 :alt="selectedMovie.title">
+                        </figure>
+                        
+                        <!-- Movie title -->
+                        <h2 class="title is-4" style="color: var(--primary-color);">
+                            [[ selectedMovie.title ]]
+                        </h2>
+                        
+                        <!-- Release date -->
+                        <p class="subtitle is-6 has-text-grey mb-3">
+                            <i class="fa fa-calendar mr-2"></i>[[ selectedMovie.release_date ]]
+                        </p>
+                        
+                        <!-- Genre tags -->
+                        <div class="mb-4">
+                            <template v-for="genre in selectedMovie.genres" :key="genre">
+                                <span class="tag is-medium mr-2 mb-2">
+                                    [[ genre ]]
+                                </span>
+                            </template>
+                        </div>
+                        
+                        <!-- Movie description -->
+                        <div class="content">
+                            <p class="has-text-weight-bold mb-2" style="color: var(--primary-color);">
+                                <i class="fa fa-info-circle mr-2"></i>Description
+                            </p>
+                            <p style="line-height: 1.6; text-align: justify;">
+                                [[ selectedMovie.overview || 'No description available.' ]]
+                            </p>
+                        </div>
+                        
+                        <!-- Action buttons -->
+                        <div class="buttons mt-5">
+                            <button class="button is-fullwidth" 
+                                    :class="inLikes(selectedMovie.movieId) ? 'is-warning' : 'is-light'"
+                                    @click="updateLike(selectedMovie.movieId)">
+                                <span class="icon">
+                                    <i :class="['fa', inLikes(selectedMovie.movieId) ? 'fa-heart' : 'fa-heart-o']"></i>
+                                </span>
+                                <span>[[ inLikes(selectedMovie.movieId) ? 'Liked' : 'Like this movie' ]]</span>
+                            </button>
+                            <button class="button is-fullwidth" 
+                                    :class="inDislikes(selectedMovie.movieId) ? 'is-danger' : 'is-light'"
+                                    @click="updateDislike(selectedMovie.movieId)">
+                                <span class="icon">
+                                    <i class="fa fa-thumbs-down"></i>
+                                </span>
+                                <span>[[ inDislikes(selectedMovie.movieId) ? 'Disliked' : 'Dislike this movie' ]]</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Comments section -->
+                        <div class="box mt-5" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--accent-color);">
+                            <h3 class="title is-5" style="color: var(--primary-color);">
+                                <i class="fa fa-comments mr-2"></i>Comments
+                            </h3>
+                            
+                            <!-- My comment -->
+                            <div v-if="myComment" class="box mb-4" style="background: rgba(255, 215, 0, 0.1); border: 1px solid var(--accent-color);">
+                                <div class="level mb-2">
+                                    <div class="level-left">
+                                        <span class="tag" :class="myComment.label === 1 ? 'is-success' : 'is-danger'">
+                                            <i :class="['fa', myComment.label === 1 ? 'fa-thumbs-up' : 'fa-thumbs-down', 'mr-1']"></i>
+                                            [[ myComment.label === 1 ? 'Like' : 'Dislike' ]]
+                                        </span>
+                                        <span class="ml-2 has-text-weight-bold" style="color: var(--accent-color);">My Comment</span>
+                                    </div>
+                                    <div class="level-right">
+                                        <button class="button is-small is-danger is-light" @click="deleteMyComment" title="Delete comment">
+                                            <span class="icon is-small">
+                                                <i class="fa fa-trash"></i>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p style="white-space: pre-wrap;">[[ myComment.text ]]</p>
+                                <small class="has-text-grey">
+                                    <i class="fa fa-clock-o mr-1"></i>[[ formatTimestamp(myComment.timestamp) ]]
+                                </small>
+                            </div>
+                            
+                            <!-- Comment form -->
+                            <div class="field">
+                                <label class="label" style="color: var(--primary-color);">
+                                    [[ myComment ? 'Edit Your Comment' : 'Write a Comment' ]]
+                                </label>
+                                <div class="control">
+                                    <textarea 
+                                        class="textarea" 
+                                        v-model="commentText" 
+                                        placeholder="Share your thoughts about this movie..."
+                                        rows="4"
+                                        maxlength="1000"
+                                        style="background: rgba(0, 0, 0, 0.3); color: white; border-color: var(--accent-color);">
+                                    </textarea>
+                                </div>
+                                <p class="help has-text-right">[[ commentText.length ]] / 1000</p>
+                            </div>
+                            
+                            <div class="field is-grouped">
+                                <div class="control is-expanded">
+                                    <button 
+                                        class="button is-success is-fullwidth" 
+                                        @click="submitComment(1)"
+                                        :disabled="!commentText.trim()">
+                                        <span class="icon">
+                                            <i class="fa fa-thumbs-up"></i>
+                                        </span>
+                                        <span>Like & Comment</span>
+                                    </button>
+                                </div>
+                                <div class="control is-expanded">
+                                    <button 
+                                        class="button is-danger is-fullwidth" 
+                                        @click="submitComment(0)"
+                                        :disabled="!commentText.trim()">
+                                        <span class="icon">
+                                            <i class="fa fa-thumbs-down"></i>
+                                        </span>
+                                        <span>Dislike & Comment</span>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- All comments list -->
+                            <hr style="background-color: var(--accent-color);">
+                            <h4 class="title is-6 mb-3" style="color: var(--primary-color);">
+                                All Comments ([[ allComments.length ]])
+                            </h4>
+                            
+                            <div v-if="allComments.length > 0" style="max-height: 400px; overflow-y: auto;">
+                                <div 
+                                    v-for="comment in allComments" 
+                                    :key="comment.userId + '_' + comment.movieId"
+                                    class="box mb-3"
+                                    style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                    <div class="level mb-2">
+                                        <div class="level-left">
+                                            <span class="tag is-small" :class="comment.label === 1 ? 'is-success' : 'is-danger'">
+                                                <i :class="['fa', comment.label === 1 ? 'fa-thumbs-up' : 'fa-thumbs-down', 'mr-1']"></i>
+                                                [[ comment.label === 1 ? 'Like' : 'Dislike' ]]
+                                            </span>
+                                            <span class="ml-2 has-text-grey is-size-7">User [[ comment.userId ]]</span>
+                                        </div>
+                                        <div class="level-right">
+                                            <small class="has-text-grey">
+                                                <i class="fa fa-clock-o mr-1"></i>[[ formatTimestamp(comment.timestamp) ]]
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <p style="white-space: pre-wrap;">[[ comment.text ]]</p>
+                                </div>
+                            </div>
+                            <p v-else class="has-text-grey has-text-centered py-4">
+                                <i class="fa fa-comment-o mr-2"></i>No comments yet. Be the first to comment!
+                            </p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer mt-6">
+            <div class="container is-max-widescreen">
+                <div class="content has-text-centered">
+                    <p>
+                        Copyright © 2026 <a href="https://hci.comp.hkbu.edu.hk" target="_blank"><strong>PI Lab</strong></a>. All Rights Reserved.
+                    </p>
+                    <a href="https://www.comp.hkbu.edu.hk" target="_blank"><img src="/static/img/comp-logo.png"
+                                                                                alt="logo"
+                                                                                style="height: 30px; margin-right: 20px"></a>
+                    <a href="https://hkbu.edu.hk" target="_blank"><img src="/static/img/bu-logo.png" alt="logo"
+                                                                       style="height: 30px;"></a>
+
+                </div>
+            </div>
+        </footer>
+    </template>
+</div>
+
+<script type="module">
+    import {createApp, onMounted, ref} from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+
+    let app = createApp({
+        setup() {
+            const isLoading = ref(true)
+            const isActivityNavBar = ref(false)
+            const selectedMovies = ref([])
+            const selectAll = ref(false)
+            const totalCount = {{ total_count }}
+            const currentTab = ref('{{ current_tab }}')
+            const likesCount = ref({{ likes_count }})
+            const dislikesCount = ref({{ dislikes_count }})
+
+            // ==== User ID Management ====
+            const currentUserId = ref({{ current_user_id }})
+            
+            function switchUser() {
+                document.cookie = "current_user_id=" + currentUserId.value + "; path=/; max-age=31536000"
+                location.reload()
+            }
+
+            // Sidebar related
+            const showSidebar = ref(false)
+            const selectedMovie = ref(null)
+            
+            // Comment related
+            const myComment = ref(null)
+            const allComments = ref([])
+            const commentText = ref('')
+            
+            // Likes/Dislikes
+            const userLikes = ref('{{ user_likes }}'.split(',').filter(id => id.trim()))
+            const userDislikes = ref('{{ user_dislikes }}'.split(',').filter(id => id.trim()))
+
+            onMounted(async () => {
+                isLoading.value = false
+                // Load user data from server
+                await loadUserData()
+            })
+            
+            // Load user data from server
+            async function loadUserData() {
+                try {
+                    // Load likes/dislikes
+                    const likesResponse = await fetch('/api/user/likes')
+                    const likesData = await likesResponse.json()
+                    if (likesData.success) {
+                        userLikes.value = likesData.likes
+                        userDislikes.value = likesData.dislikes
+                        // Sync to Cookie
+                        document.cookie = "user_likes=" + userLikes.value.join(',')
+                        document.cookie = "user_dislikes=" + userDislikes.value.join(',')
+                    }
+                } catch (error) {
+                    console.error('Failed to load user data:', error)
+                }
+            }
+
+            // Handle card click, avoid checkbox misclick
+            function handleCardClick(event, movieId) {
+                // If clicked on checkbox or label, don't open sidebar
+                const target = event.target
+                if (target.type === 'checkbox' || 
+                    target.tagName === 'LABEL' || 
+                    target.closest('.card-header')) {
+                    return
+                }
+                
+                // Read movie data from data attributes
+                const card = event.currentTarget
+                const movie = {
+                    movieId: parseInt(card.dataset.movieId),
+                    title: card.dataset.movieTitle,
+                    release_date: card.dataset.movieYear,
+                    cover_url: card.dataset.movieCover,
+                    overview: card.dataset.movieOverview,
+                    genres: card.dataset.movieGenres.split('|')
+                }
+                
+                openSidebar(movie)
+            }
+
+            async function openSidebar(movie) {
+                selectedMovie.value = movie
+                showSidebar.value = true
+                
+                // Load comments
+                await loadMyComment(movie.movieId)
+                await loadAllComments(movie.movieId)
+            }
+
+            function closeSidebar() {
+                showSidebar.value = false
+                setTimeout(() => {
+                    selectedMovie.value = null
+                }, 300)
+            }
+
+            function toggleSelectAll() {
+                if (selectAll.value) {
+                    // Deselect all
+                    selectedMovies.value = []
+                    selectAll.value = false
+                } else {
+                    // Select all on current page
+                    const checkboxes = document.querySelectorAll('input[name="selected_movies"]')
+                    selectedMovies.value = Array.from(checkboxes).map(cb => parseInt(cb.value))
+                    selectAll.value = true
+                }
+            }
+
+            function isSelected(movieId) {
+                return selectedMovies.value.includes(movieId)
+            }
+
+            async function deleteSelected() {
+                if (selectedMovies.value.length === 0) {
+                    alert('Please select at least one movie to delete.')
+                    return
+                }
+
+                const count = selectedMovies.value.length
+                if (!confirm(`Are you sure you want to remove ${count} movie(s)? This will also remove their ratings.`)) {
+                    return
+                }
+                
+                try {
+                    const response = await fetch('/api/user/likes/batch-delete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            movieIds: selectedMovies.value.map(id => parseInt(id))
+                        })
+                    })
+                    
+                    const data = await response.json()
+                    
+                    if (data.success) {
+                        alert(data.message)
+                        // Refresh page
+                        location.reload()
+                    } else {
+                        alert('Failed: ' + data.message)
+                    }
+                } catch (error) {
+                    console.error('Failed to delete selected movies:', error)
+                    alert('Failed to delete movies, please try again')
+                }
+            }
+
+            async function deleteAll() {
+                const type = currentTab.value === 'likes' ? 'liked' : 'disliked'
+                if (!confirm(`Are you sure you want to remove ALL ${type} movies and their ratings? This action cannot be undone.`)) {
+                    return
+                }
+                
+                try {
+                    const response = await fetch('/api/user/likes/delete-all', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    
+                    const data = await response.json()
+                    
+                    if (data.success) {
+                        alert(data.message)
+                        // Refresh page
+                        location.reload()
+                    } else {
+                        alert('Failed: ' + data.message)
+                    }
+                } catch (error) {
+                    console.error('Failed to delete all movies:', error)
+                    alert('Failed to delete all movies, please try again')
+                }
+            }
+
+            // Like/Dislike functions
+            async function updateLike(_movieId) {
+                let movieId = _movieId.toString()
+                const index = userLikes.value.indexOf(movieId)
+                let action = 'like'
+                
+                if (index > -1) {
+                    userLikes.value.splice(index, 1)
+                    action = 'remove'
+                } else {
+                    userLikes.value.push(movieId)
+                    // If adding to likes, remove from dislikes
+                    const dislikeIndex = userDislikes.value.indexOf(movieId)
+                    if (dislikeIndex > -1) {
+                        userDislikes.value.splice(dislikeIndex, 1)
+                    }
+                }
+
+                document.cookie = "user_likes=" + userLikes.value
+                document.cookie = "user_dislikes=" + userDislikes.value
+                
+                // Save to server
+                try {
+                    const formData = new FormData()
+                    formData.append('movieId', parseInt(movieId))
+                    formData.append('action', action)
+                    await fetch('/api/user/like', {
+                        method: 'POST',
+                        body: formData
+                    })
+                } catch (error) {
+                    console.error('Failed to save like:', error)
+                }
+            }
+            
+            async function updateDislike(_movieId) {
+                let movieId = _movieId.toString()
+                const index = userDislikes.value.indexOf(movieId)
+                let action = 'dislike'
+                
+                if (index > -1) {
+                    userDislikes.value.splice(index, 1)
+                    action = 'remove'
+                } else {
+                    userDislikes.value.push(movieId)
+                    // If adding to dislikes, remove from likes
+                    const likeIndex = userLikes.value.indexOf(movieId)
+                    if (likeIndex > -1) {
+                        userLikes.value.splice(likeIndex, 1)
+                    }
+                }
+
+                document.cookie = "user_dislikes=" + userDislikes.value
+                document.cookie = "user_likes=" + userLikes.value
+                
+                // Save to server
+                try {
+                    const formData = new FormData()
+                    formData.append('movieId', parseInt(movieId))
+                    formData.append('action', action)
+                    await fetch('/api/user/like', {
+                        method: 'POST',
+                        body: formData
+                    })
+                } catch (error) {
+                    console.error('Failed to save dislike:', error)
+                }
+            }
+            
+            function inLikes(movieId) {
+                return userLikes.value.includes(movieId.toString())
+            }
+            
+            function inDislikes(movieId) {
+                return userDislikes.value.includes(movieId.toString())
+            }
+
+            // Comment functions
+            async function loadMyComment(movieId) {
+                try {
+                    const response = await fetch(`/api/movie/${movieId}/my-comment`)
+                    const data = await response.json()
+                    
+                    if (data.success && data.comment) {
+                        myComment.value = data.comment
+                        commentText.value = data.comment.text
+                    } else {
+                        myComment.value = null
+                        commentText.value = ''
+                    }
+                } catch (error) {
+                    console.error('Failed to load my comment:', error)
+                }
+            }
+            
+            async function loadAllComments(movieId) {
+                try {
+                    const response = await fetch(`/api/movie/${movieId}/comments`)
+                    const data = await response.json()
+                    
+                    if (data.success) {
+                        allComments.value = data.comments
+                    }
+                } catch (error) {
+                    console.error('Failed to load comments:', error)
+                }
+            }
+            
+            async function submitComment(label) {
+                if (!commentText.value.trim()) {
+                    alert('Please enter your comment')
+                    return
+                }
+                
+                const movieId = selectedMovie.value.movieId
+                const formData = new FormData()
+                formData.append('text', commentText.value)
+                formData.append('label', label)
+                
+                try {
+                    const response = await fetch(`/api/movie/${movieId}/comment`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    
+                    const data = await response.json()
+                    
+                    if (data.success) {
+                        alert(data.message)
+                        await loadMyComment(movieId)
+                        await loadAllComments(movieId)
+                    } else {
+                        alert('Failed: ' + data.message)
+                    }
+                } catch (error) {
+                    console.error('Failed to submit comment:', error)
+                    alert('Failed to submit comment, please try again')
+                }
+            }
+            
+            async function deleteMyComment() {
+                if (!confirm('Are you sure you want to delete this comment?')) {
+                    return
+                }
+                
+                const movieId = selectedMovie.value.movieId
+                
+                try {
+                    const response = await fetch(`/api/movie/${movieId}/comment`, {
+                        method: 'DELETE'
+                    })
+                    
+                    const data = await response.json()
+                    
+                    if (data.success) {
+                        alert('Comment deleted')
+                        myComment.value = null
+                        commentText.value = ''
+                        await loadAllComments(movieId)
+                    } else {
+                        alert('Failed: ' + data.message)
+                    }
+                } catch (error) {
+                    console.error('Failed to delete comment:', error)
+                    alert('Failed to delete comment, please try again')
+                }
+            }
+            
+            function formatTimestamp(timestamp) {
+                const date = new Date(timestamp * 1000)
+                const now = new Date()
+                const diff = now - date
+                
+                if (diff < 60000) {
+                    return 'Just now'
+                }
+                if (diff < 3600000) {
+                    return Math.floor(diff / 60000) + ' minutes ago'
+                }
+                if (diff < 86400000) {
+                    return Math.floor(diff / 3600000) + ' hours ago'
+                }
+                if (diff < 604800000) {
+                    return Math.floor(diff / 86400000) + ' days ago'
+                }
+                
+                return date.toLocaleDateString()
+            }
+
+            return {
+                isLoading,
+                isActivityNavBar,
+                // User ID
+                currentUserId,
+                switchUser,
+                selectedMovies,
+                selectAll,
+                totalCount,
+                currentTab,
+                likesCount,
+                dislikesCount,
+                toggleSelectAll,
+                isSelected,
+                deleteSelected,
+                deleteAll,
+                // Sidebar
+                showSidebar,
+                selectedMovie,
+                handleCardClick,
+                openSidebar,
+                closeSidebar,
+                // Like/Dislike
+                userLikes,
+                userDislikes,
+                updateLike,
+                updateDislike,
+                inLikes,
+                inDislikes,
+                // Comments
+                myComment,
+                allComments,
+                commentText,
+                submitComment,
+                deleteMyComment,
+                formatTimestamp,
+            }
+        }
+    })
+
+    app.config.compilerOptions.delimiters = ['[[', ']]']
+    app.mount('#app')
+
+</script>
+</body>
+</html>

@@ -6,6 +6,7 @@
     <title>Movie Recommender System</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sci-fi-style.css') }}">
 </head>
 <body>
 <div id="app">
@@ -39,14 +40,44 @@
 
                 <div id="navbarBasicExample" :class="['navbar-menu', isActivityNavBar ? 'is-active' : '']">
                     <div class="navbar-start">
+                        <a class="navbar-item is-active" href="/">
+                            <i class="fa fa-home mr-2"></i> Home
+                        </a>
+                        <a class="navbar-item" href="/browse">
+                            <i class="fa fa-film mr-2"></i> Browse
+                        </a>
+                        <a class="navbar-item" href="/my-likes">
+                            <i class="fa fa-heart mr-2"></i> My Likes
+                        </a>
                     </div>
                     <div class="navbar-end">
                         <div class="navbar-item">
+                            <div class="field has-addons mb-0">
+                                <div class="control">
+                                    <span class="button is-static">
+                                        <i class="fa fa-user mr-2"></i>User ID
+                                    </span>
+                                </div>
+                                <div class="control">
+                                    <div class="select">
+                                        <select v-model="currentUserId" @change="switchUser">
+                                            <option value="611">611</option>
+                                            <option value="612">612</option>
+                                            <option value="613">613</option>
+                                            <option value="614">614</option>
+                                            <option value="615">615</option>
+                                            <option value="616">616</option>
+                                            <option value="617">617</option>
+                                            <option value="618">618</option>
+                                            <option value="619">619</option>
+                                            <option value="620">620</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="navbar-item">
                             <div class="buttons">
-                                <button class="button is-danger" @click="cleanAll">
-                                    <strong>Clean All</strong>
-                                </button>
-
                                 <button class="button is-link" @click="showGenres = true">
                                     <strong>Genres</strong>
                                 </button>
@@ -57,141 +88,222 @@
             </nav>
         </div>
 
-        <template v-if="genres.length > 0 && userRates.length > 0">
-            {% if recommendations %}
-            <section class="section pt-2 pb-0">
-                <div class="container">
-                    <p class="is-size-4">
-                        Recommended
+        <!-- Welcome section (displayed when there are no recommendations) -->
+        {% if not recommendations and not likes_similars and not likes %}
+        <section class="hero is-info">
+            <div class="hero-body">
+                <div class="container has-text-centered">
+                    <p class="title">
+                        Welcome to Movie Recommender System!
                     </p>
-                    <p class="mb-3">{{ recommendations_message }}</p>
-
-                    <div class="columns is-mobile is-multiline">
-                        {% for movie in recommendations %}
-                        <div class="column is-3-fullhd is-3-desktop is-3-tablet is-6-mobile">
-                            <div class="card">
-                                <div class="card-image">
-                                    <figure class="image is-4by3">
-                                        <img src="{{ movie['cover_url'] }}"
-                                             onerror="this.src='https://placehold.co/480x640?text=No+Cover';"
-                                             alt="">
-                                    </figure>
-                                </div>
-                                <div class="card-content p-2">
-                                    <div class="media">
-                                        <div class="media-content">
-                                            <p style="font-size: 0.8rem; font-weight: bold">{{ movie['title']
-                                                }}</p>
-                                            <p style="font-size: 0.8rem">{{ movie['release_date'] }}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="card-footer p-2">
-                                    <button class="button is-small" @click="updateLike({{movie['movieId']}})">
-                                        <span :class="['fa fa-thumbs-up', inLikes({{movie['movieId']}}) ? 'checked': '']" > Like</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
+                    <p class="subtitle mt-3">
+                        Get started by browsing movies and liking the ones you enjoy.
+                    </p>
+                    <div class="buttons is-centered mt-5">
+                        <a href="/browse" class="button is-primary is-large">
+                            <span class="icon">
+                                <i class="fa fa-film"></i>
+                            </span>
+                            <span>Browse All Movies</span>
+                        </a>
+                        <button class="button is-light is-large" @click="showGenres = true">
+                            <span class="icon">
+                                <i class="fa fa-filter"></i>
+                            </span>
+                            <span>Select Genres</span>
+                        </button>
+                    </div>
+                    <div class="content mt-5">
+                        <p class="is-size-6">
+                            <strong>How it works:</strong><br>
+                            1. Browse movies and like the ones you enjoy<br>
+                            2. Rate at least 10 movies to get personalized recommendations<br>
+                            3. Discover new movies based on your preferences!
+                        </p>
                     </div>
                 </div>
-            </section>
-            {% endif %}
+            </div>
+        </section>
+        {% endif %}
 
-            {% if likes_similars %}
-            <section class="section pb-0">
-                <div class="container">
-                    <p class="is-size-4">
-                        Liked with Similar Items
-                    </p>
-                    <p class="mb-3">{{ likes_similar_message }}</p>
+        <!-- Recommendation section (requires genre selection and ratings) -->
+        {% if recommendations %}
+        <section class="section pt-2 pb-0">
+            <div class="container">
+                <p class="is-size-4">
+                    Recommended
+                </p>
+                <p class="mb-3">{{ recommendations_message }}</p>
 
-                    <div class="columns is-mobile is-multiline">
-                        {% for movie in likes_similars %}
-                        <div class="column is-2-fullhd is-2-desktop is-2-tablet is-6-mobile">
-                            <div class="card">
-                                <div class="card-image">
-                                    <figure class="image is-3by4">
-                                        <img src="{{ movie['cover_url'] }}"
-                                             onerror="this.src='https://placehold.co/480x640?text=No+Cover';"
-                                             alt="">
-                                    </figure>
+                <div class="columns is-mobile is-multiline">
+                    {% for movie in recommendations %}
+                    <div class="column is-2-fullhd is-2-desktop is-2-tablet is-6-mobile">
+                        <div class="card movie-card-with-overlay" style="cursor: pointer;" @click="openSidebar(recommendationsData[{{ loop.index0 }}])">
+                            <div class="card-image">
+                                <figure class="image is-3by4">
+                                    <img src="{{ movie['cover_url'] }}"
+                                         onerror="this.src='https://placehold.co/480x640?text=No+Cover';"
+                                         alt="">
+                                </figure>
+                                {% if movie['overview'] and movie['overview'] is string %}
+                                <div class="image-overlay">
+                                    <p class="overlay-text">{{ movie['overview'][:150] }}{% if movie['overview']|length > 150 %}...{% endif %}</p>
                                 </div>
-                                <div class="card-content p-2">
-                                    <div class="media">
-                                        <div class="media-content">
-                                            <p style="font-size: 0.8rem; font-weight: bold">{{ movie['title']
-                                                }}</p>
-                                            <p style="font-size: 0.8rem">{{ movie['release_date'] }}</p>
-                                        </div>
+                                {% endif %}
+                            </div>
+                            <div class="card-content p-2">
+                                <div class="media">
+                                    <div class="media-content">
+                                        <p style="font-size: 0.8rem; font-weight: bold">{{ movie['title'] }}</p>
+                                        <p style="font-size: 0.7rem" class="has-text-grey">{{ movie['release_date'] }}</p>
+                                        {% if movie['genres'] %}
+                                        <p style="font-size: 0.7rem" class="mt-1">
+                                            {% for genre in movie['genres'][:2] %}
+                                            <span class="tag is-small">{{ genre }}</span>
+                                            {% endfor %}
+                                        </p>
+                                        {% endif %}
                                     </div>
                                 </div>
+                            </div>
 
-                                <div class="card-footer p-2">
-                                    <button class="button is-small" @click="updateLike({{movie['movieId']}})">
-                                        <span :class="['fa fa-thumbs-up', inLikes({{movie['movieId']}}) ? 'checked': '']" > Like</span>
-                                    </button>
-                                </div>
+                            <div class="card-footer p-2" style="display: flex; gap: 0.5rem;">
+                                <button class="button is-small" style="flex: 1;" @click.stop="updateLike({{movie['movieId']}})">
+                                    <span :class="['fa fa-thumbs-up', inLikes({{movie['movieId']}}) ? 'checked': '']"></span>
+                                </button>
+                                <button class="button is-small" style="flex: 1;" @click.stop="updateDislike({{movie['movieId']}})">
+                                    <span :class="['fa fa-thumbs-down', inDislikes({{movie['movieId']}}) ? 'checked': '']"></span>
+                                </button>
                             </div>
                         </div>
-                        {% endfor %}
                     </div>
+                    {% endfor %}
                 </div>
-            </section>
-            {% endif %}
+            </div>
+        </section>
+        {% endif %}
 
-            {% if likes %}
-            <section class="section pb-0">
-                <div class="container">
-                    <p class="is-size-4 mb-3">
-                        Liked <button class="button" @click="reloadPage"><i class="fa fa-refresh mr-3" aria-hidden="true"></i>Refresh</button>
-                    </p>
+        <!-- Similar movies section (only requires likes) -->
+        {% if likes_similars %}
+        <section class="section pb-0">
+            <div class="container">
+                <p class="is-size-4">
+                    Liked with Similar Items
+                </p>
+                <p class="mb-3">{{ likes_similar_message }}</p>
 
-                    <div class="columns is-mobile pb-3" style="overflow: scroll">
-                        {% for movie in likes %}
-                        <div class="column is-2-fullhd is-2-desktop is-2-tablet is-6-mobile">
-                            <div class="card">
-                                <div class="card-image">
-                                    <figure class="image is-3by4">
-                                        <img src="{{ movie['cover_url'] }}"
-                                             onerror="this.src='https://placehold.co/480x640?text=No+Cover';"
-                                             alt="">
-                                    </figure>
+                <div class="columns is-mobile is-multiline">
+                    {% for movie in likes_similars %}
+                    <div class="column is-2-fullhd is-2-desktop is-2-tablet is-6-mobile">
+                        <div class="card movie-card-with-overlay" style="cursor: pointer;" @click="openSidebar(likesSimilarsData[{{ loop.index0 }}])">
+                            <div class="card-image">
+                                <figure class="image is-3by4">
+                                    <img src="{{ movie['cover_url'] }}"
+                                         onerror="this.src='https://placehold.co/480x640?text=No+Cover';"
+                                         alt="">
+                                </figure>
+                                {% if movie['overview'] and movie['overview'] is string %}
+                                <div class="image-overlay">
+                                    <p class="overlay-text">{{ movie['overview'][:120] }}{% if movie['overview']|length > 120 %}...{% endif %}</p>
                                 </div>
-                                <div class="card-content p-2">
-                                    <div class="media">
-                                        <div class="media-content">
-                                            <p style="font-size: 0.8rem; font-weight: bold">{{ movie['title']
-                                                }}</p>
-                                            <p style="font-size: 0.8rem">{{ movie['release_date'] }}</p>
-                                        </div>
+                                {% endif %}
+                            </div>
+                            <div class="card-content p-2">
+                                <div class="media">
+                                    <div class="media-content">
+                                        <p style="font-size: 0.8rem; font-weight: bold">{{ movie['title'] }}</p>
+                                        <p style="font-size: 0.7rem" class="has-text-grey">{{ movie['release_date'] }}</p>
+                                        {% if movie['genres'] %}
+                                        <p style="font-size: 0.7rem" class="mt-1">
+                                            {% for genre in movie['genres'][:2] %}
+                                            <span class="tag is-small">{{ genre }}</span>
+                                            {% endfor %}
+                                        </p>
+                                        {% endif %}
                                     </div>
                                 </div>
+                            </div>
 
-                                <div class="card-footer p-2">
-                                    <button class="button is-small" @click="updateLike({{movie['movieId']}})">
-                                        <span :class="['fa fa-thumbs-up', inLikes({{movie['movieId']}}) ? 'checked': '']" > Like</span>
-                                    </button>
-                                </div>
+                            <div class="card-footer p-2" style="display: flex; gap: 0.5rem;">
+                                <button class="button is-small" style="flex: 1;" @click.stop="updateLike({{movie['movieId']}})">
+                                    <span :class="['fa fa-thumbs-up', inLikes({{movie['movieId']}}) ? 'checked': '']"></span>
+                                </button>
+                                <button class="button is-small" style="flex: 1;" @click.stop="updateDislike({{movie['movieId']}})">
+                                    <span :class="['fa fa-thumbs-down', inDislikes({{movie['movieId']}}) ? 'checked': '']"></span>
+                                </button>
                             </div>
                         </div>
-                        {% endfor %}
                     </div>
+                    {% endfor %}
                 </div>
-            </section>
-            {% endif %}
-        </template>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- My likes section (only requires likes) -->
+        {% if likes %}
+        <section class="section pb-0">
+            <div class="container">
+                <p class="is-size-4 mb-3">
+                    Liked <button class="button" @click="reloadPage"><i class="fa fa-refresh mr-3" aria-hidden="true"></i>Refresh</button>
+                </p>
+
+                <div class="columns is-mobile pb-3" style="overflow: scroll">
+                    {% for movie in likes %}
+                    <div class="column is-2-fullhd is-2-desktop is-2-tablet is-6-mobile">
+                        <div class="card movie-card-with-overlay" style="cursor: pointer;" @click="openSidebar(likesData[{{ loop.index0 }}])">
+                            <div class="card-image">
+                                <figure class="image is-3by4">
+                                    <img src="{{ movie['cover_url'] }}"
+                                         onerror="this.src='https://placehold.co/480x640?text=No+Cover';"
+                                         alt="">
+                                </figure>
+                                {% if movie['overview'] and movie['overview'] is string %}
+                                <div class="image-overlay">
+                                    <p class="overlay-text">{{ movie['overview'][:120] }}{% if movie['overview']|length > 120 %}...{% endif %}</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="card-content p-2">
+                                <div class="media">
+                                    <div class="media-content">
+                                        <p style="font-size: 0.8rem; font-weight: bold">{{ movie['title'] }}</p>
+                                        <p style="font-size: 0.7rem" class="has-text-grey">{{ movie['release_date'] }}</p>
+                                        {% if movie['genres'] %}
+                                        <p style="font-size: 0.7rem" class="mt-1">
+                                            {% for genre in movie['genres'][:2] %}
+                                            <span class="tag is-small">{{ genre }}</span>
+                                            {% endfor %}
+                                        </p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-footer p-2" style="display: flex; gap: 0.5rem;">
+                                <button class="button is-small" style="flex: 1;" @click.stop="updateLike({{movie['movieId']}})">
+                                    <span :class="['fa fa-thumbs-up', inLikes({{movie['movieId']}}) ? 'checked': '']"></span>
+                                </button>
+                                <button class="button is-small" style="flex: 1;" @click.stop="updateDislike({{movie['movieId']}})">
+                                    <span :class="['fa fa-thumbs-down', inDislikes({{movie['movieId']}}) ? 'checked': '']"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        {% endif %}
 
         <div :class="['modal', showGenres ? 'is-active' : '']">
             <div class="modal-background"></div>
             <div class="modal-card">
                 <header class="modal-card-head">
-                    <p class="modal-card-title">Please choose any genre you're interested in.</p>
+                    <p class="modal-card-title">Filter movies by genre</p>
                 </header>
                 <div class="modal-card-body">
-                    <p class="mb-3">Multiple answers are possible.</p>
+                    <p class="mb-3">Select genres to filter the movies displayed on this page. Choose "All" to see all movies.</p>
                     {% for gener in genres %}
                     <button :class="['button m-2', inGenres({{gener['id']}}) ? 'is-link' : '' ]" value="{{gener['id']}}"
                             @click="updateGenre({{gener['id']}})">
@@ -200,7 +312,7 @@
                     {% endfor %}
                 </div>
                 <footer class="modal-card-foot">
-                    <button class="button is-link" :disabled="genres.length == 0" @click="saveGenres">Save
+                    <button class="button is-link" :disabled="genres.length == 0" @click="saveGenres">Apply Filter
                     </button>
                 </footer>
             </div>
@@ -226,9 +338,20 @@
                                 <div class="card-content p-2">
                                     <div class="media">
                                         <div class="media-content">
-                                            <p style="font-size: 0.8rem; font-weight: bold">{{ movie['title']
-                                                }}</p>
-                                            <p style="font-size: 0.8rem">{{ movie['release_date'] }}</p>
+                                            <p style="font-size: 0.8rem; font-weight: bold">{{ movie['title'] }}</p>
+                                            <p style="font-size: 0.7rem" class="has-text-grey">{{ movie['release_date'] }}</p>
+                                            {% if movie['genres'] %}
+                                            <p style="font-size: 0.7rem" class="mt-1">
+                                                {% for genre in movie['genres'][:2] %}
+                                                <span class="tag is-small">{{ genre }}</span>
+                                                {% endfor %}
+                                            </p>
+                                            {% endif %}
+                                            {% if movie['overview'] and movie['overview'] is string %}
+                                            <p style="font-size: 0.7rem; margin-top: 0.5rem; color: var(--text-secondary);" class="overview-text">
+                                                {{ movie['overview'][:80] }}{% if movie['overview']|length > 80 %}...{% endif %}
+                                            </p>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -249,6 +372,231 @@
                             @click="showMovieRate = false; reloadPage()">Save
                     </button>
                 </footer>
+            </div>
+        </div>
+
+        <!-- Movie details sidebar -->
+        <div :class="['modal', showSidebar ? 'is-active' : '']" @click.self="closeSidebar">
+            <div class="modal-background" @click="closeSidebar"></div>
+            <div class="modal-content" style="width: 500px; max-width: 90vw;">
+                <div class="box" style="background: var(--card-bg); border: 1px solid var(--primary-color); max-height: 90vh; overflow-y: auto;">
+                    <template v-if="selectedMovie">
+                        <!-- Close button -->
+                        <button class="delete is-large" style="position: absolute; top: 10px; right: 10px;" @click="closeSidebar"></button>
+
+                        <!-- Movie poster -->
+                        <figure class="image is-3by4 mb-4">
+                            <img :src="selectedMovie.cover_url"
+                                 @error="$event.target.src='https://placehold.co/480x640?text=No+Cover'"
+                                 :alt="selectedMovie.title">
+                        </figure>
+
+                        <!-- Movie title -->
+                        <h2 class="title is-4" style="color: var(--primary-color);">
+                            [[ selectedMovie.title ]]
+                        </h2>
+
+                        <!-- Release date -->
+                        <p class="subtitle is-6 has-text-grey mb-3">
+                            <i class="fa fa-calendar mr-2"></i>[[ selectedMovie.release_date ]]
+                        </p>
+
+                        <!-- Genre tags -->
+                        <div class="mb-4">
+                            <template v-for="genre in selectedMovie.genres" :key="genre">
+                                <span class="tag is-medium mr-2 mb-2">
+                                    [[ genre ]]
+                                </span>
+                            </template>
+                        </div>
+
+                        <!-- Rating section -->
+                        <div class="box mb-4" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--accent-color);">
+                            <p class="has-text-weight-bold mb-3" style="color: var(--accent-color);">
+                                <i class="fa fa-star mr-2"></i>Rate this movie
+                            </p>
+                            <div class="has-text-centered">
+                                <template v-for="rate in [1, 2, 3, 4, 5]" :key="rate">
+                                    <span :class="['fa fa-star star', 'is-size-2', 'mx-1', getRate(selectedMovie.movieId)[1] >= rate ? 'checked' : '']"
+                                          @click="updateRate(selectedMovie.movieId, rate)"
+                                          style="cursor: pointer; transition: all 0.3s;">
+                                    </span>
+                                </template>
+                            </div>
+                            <p class="has-text-centered mt-2" v-if="getRate(selectedMovie.movieId)[1] > 0">
+                                Your rating: [[ getRate(selectedMovie.movieId)[1] ]] / 5
+                            </p>
+                        </div>
+
+                        <!-- Movie description -->
+                        <div class="content">
+                            <p class="has-text-weight-bold mb-2" style="color: var(--primary-color);">
+                                <i class="fa fa-info-circle mr-2"></i>Description
+                            </p>
+                            <p style="line-height: 1.6; text-align: justify;">
+                                [[ selectedMovie.overview || 'No description available.' ]]
+                            </p>
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div class="buttons mt-5">
+                            <button class="button is-fullwidth"
+                                    :class="inLikes(selectedMovie.movieId) ? 'is-warning' : 'is-light'"
+                                    @click="updateLike(selectedMovie.movieId)">
+                                <span class="icon">
+                                    <i :class="['fa', inLikes(selectedMovie.movieId) ? 'fa-heart' : 'fa-heart-o']"></i>
+                                </span>
+                                <span>[[ inLikes(selectedMovie.movieId) ? 'Liked' : 'Like this movie' ]]</span>
+                            </button>
+                            <button class="button is-fullwidth"
+                                    :class="inDislikes(selectedMovie.movieId) ? 'is-danger' : 'is-light'"
+                                    @click="updateDislike(selectedMovie.movieId)">
+                                <span class="icon">
+                                    <i class="fa fa-thumbs-down"></i>
+                                </span>
+                                <span>[[ inDislikes(selectedMovie.movieId) ? 'Disliked' : 'Dislike this movie' ]]</span>
+                            </button>
+                        </div>
+
+                        <!-- Comments section -->
+                        <div class="box mt-5" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--accent-color);">
+                            <h3 class="title is-5" style="color: var(--primary-color);">
+                                <i class="fa fa-comments mr-2"></i>Comments
+                            </h3>
+
+                            <!-- My comment -->
+                            <div v-if="myComment" class="box mb-4" style="background: rgba(255, 215, 0, 0.1); border: 1px solid var(--accent-color);">
+                                <div class="level mb-2">
+                                    <div class="level-left">
+                                        <span class="tag" :class="myComment.label === 1 ? 'is-success' : 'is-danger'">
+                                            <i :class="['fa', myComment.label === 1 ? 'fa-thumbs-up' : 'fa-thumbs-down', 'mr-1']"></i>
+                                            [[ myComment.label === 1 ? 'Like' : 'Dislike' ]]
+                                        </span>
+                                        <span class="ml-2 has-text-weight-bold" style="color: var(--accent-color);">My Comment</span>
+                                    </div>
+                                    <div class="level-right">
+                                        <button class="button is-small is-danger is-light" @click="deleteMyComment" title="Delete comment">
+                                            <span class="icon is-small">
+                                                <i class="fa fa-trash"></i>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p style="white-space: pre-wrap;">[[ myComment.text ]]</p>
+                                <small class="has-text-grey">
+                                    <i class="fa fa-clock-o mr-1"></i>[[ formatTimestamp(myComment.timestamp) ]]
+                                </small>
+                            </div>
+
+                            <!-- Comment form -->
+                            <div class="field">
+                                <label class="label" style="color: var(--primary-color);">
+                                    [[ myComment ? 'Edit Your Comment' : 'Write a Comment' ]]
+                                </label>
+                                <div class="control">
+                                    <textarea
+                                        class="textarea"
+                                        v-model="commentText"
+                                        placeholder="Share your thoughts about this movie..."
+                                        rows="4"
+                                        maxlength="1000"
+                                        style="background: rgba(0, 0, 0, 0.3); color: white; border-color: var(--accent-color);">
+                                    </textarea>
+                                </div>
+                                <p class="help has-text-right">[[ commentText.length ]] / 1000</p>
+                            </div>
+
+                            <div class="field is-grouped">
+                                <div class="control is-expanded">
+                                    <button
+                                        class="button is-success is-fullwidth"
+                                        @click="submitComment(1)"
+                                        :disabled="!commentText.trim()">
+                                        <span class="icon">
+                                            <i class="fa fa-thumbs-up"></i>
+                                        </span>
+                                        <span>Like & Comment</span>
+                                    </button>
+                                </div>
+                                <div class="control is-expanded">
+                                    <button
+                                        class="button is-danger is-fullwidth"
+                                        @click="submitComment(0)"
+                                        :disabled="!commentText.trim()">
+                                        <span class="icon">
+                                            <i class="fa fa-thumbs-down"></i>
+                                        </span>
+                                        <span>Dislike & Comment</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- All comments list -->
+                            <hr style="background-color: var(--accent-color);">
+                            <h4 class="title is-6 mb-3" style="color: var(--primary-color);">
+                                All Comments ([[ allComments.length ]])
+                            </h4>
+
+                            <div v-if="allComments.length > 0" style="max-height: 400px; overflow-y: auto;">
+                                <div
+                                    v-for="comment in allComments"
+                                    :key="comment.userId + '_' + comment.movieId"
+                                    class="box mb-3"
+                                    style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                    <div class="level mb-2">
+                                        <div class="level-left">
+                                            <span class="tag is-small" :class="comment.label === 1 ? 'is-success' : 'is-danger'">
+                                                <i :class="['fa', comment.label === 1 ? 'fa-thumbs-up' : 'fa-thumbs-down', 'mr-1']"></i>
+                                                [[ comment.label === 1 ? 'Like' : 'Dislike' ]]
+                                            </span>
+                                            <span class="ml-2 has-text-grey is-size-7">User [[ comment.userId ]]</span>
+                                        </div>
+                                        <div class="level-right">
+                                            <small class="has-text-grey">
+                                                <i class="fa fa-clock-o mr-1"></i>[[ formatTimestamp(comment.timestamp) ]]
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <p style="white-space: pre-wrap;">[[ comment.text ]]</p>
+                                </div>
+                            </div>
+                            <p v-else class="has-text-grey has-text-centered py-4">
+                                <i class="fa fa-comment-o mr-2"></i>No comments yet. Be the first to comment!
+                            </p>
+
+                            <!-- Comment-based recommendations -->
+                            <hr style="background-color: var(--accent-color);">
+                            <h4 class="title is-6 mb-3" style="color: var(--primary-color);">
+                                Recommended movies based on your comment
+                            </h4>
+
+                            <div v-if="recommendMovies && recommendMovies.length > 0">
+                                <div v-for="movie in recommendMovies"
+                                     :key="movie.movieId"
+                                     class="box mb-3"
+                                     style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(0, 255, 255, 0.3); cursor: pointer;"
+                                     @click="openSidebar(movie)">
+                                    <div class="level mb-1">
+                                        <div class="level-left">
+                                            <span class="has-text-weight-bold">[[ movie.title ]]</span>
+                                        </div>
+                                        <div class="level-right">
+                                            <small class="has-text-grey is-size-7">
+                                                score: [[ movie.score.toFixed(2) ]]
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <p class="has-text-grey is-size-7">
+                                        [[ movie.overview ? movie.overview.slice(0, 120) + (movie.overview.length > 120 ? '...' : '') : 'No description.' ]]
+                                    </p>
+                                </div>
+                            </div>
+                            <p v-else class="has-text-grey has-text-centered py-2">
+                                No recommendations yet. Submit a comment to get recommendations.
+                            </p>
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
 
@@ -278,37 +626,116 @@
             const isLoading = ref(true)
             const isActivityNavBar = ref(false)
 
-            // ==== Vue default operations ====
-            onMounted(() => {
-                isLoading.value = false
+            // ==== User ID Management ====
+            const currentUserId = ref({{ current_user_id }})
 
-                showGenres.value = genres.value.length === 0
-                showMovieRate.value = (genres.value.length > 0 && userRates.value.length === 0)
+            function switchUser() {
+                document.cookie = "current_user_id=" + currentUserId.value + "; path=/; max-age=31536000"
+                location.reload()
+            }
+
+            // ==== Movie Data ====
+            const recommendationsData = ref({{ recommendations | tojson if recommendations else '[]' }})
+            const likesSimilarsData = ref({{ likes_similars | tojson if likes_similars else '[]' }})
+            const likesData = ref({{ likes | tojson if likes else '[]' }})
+
+            // ==== Movie Rate and Like Data ====
+            const userRates = ref({{user_rates | tojson}})
+            const userLikes = ref({{user_likes | tojson}})
+            const userDislikes = ref({{user_dislikes | tojson}})
+
+            // ==== Vue default operations ====
+            onMounted(async () => {
+                isLoading.value = false
+                await loadUserData()
+                showMovieRate.value = false
             })
 
-            function cleanAll() {
-                if (confirm("Are you sure to delete all records?")) {
-                    document.cookie = "user_genres=; Max-Age=0";
-                    document.cookie = "user_rates=; Max-Age=0";
-                    document.cookie = "user_likes=; Max-Age=0";
-                    reloadPage()
+            async function loadUserData() {
+                try {
+                    const ratingsResponse = await fetch('/api/user/ratings')
+                    const ratingsData = await ratingsResponse.json()
+                    if (ratingsData.success) {
+                        userRates.value = ratingsData.ratings
+                        document.cookie = "user_rates=" + userRates.value.join(',')
+                    }
+
+                    const likesResponse = await fetch('/api/user/likes')
+                    const likesDataResp = await likesResponse.json()
+                    if (likesDataResp.success) {
+                        userLikes.value = likesDataResp.likes
+                        userDislikes.value = likesDataResp.dislikes
+                        document.cookie = "user_likes=" + userLikes.value.join(',')
+                        document.cookie = "user_dislikes=" + userDislikes.value.join(',')
+                    }
+                } catch (error) {
+                    console.error('Failed to load user data:', error)
                 }
+            }
+
+            // ==== Sidebar Operation ====
+            const showSidebar = ref(false)
+            const selectedMovie = ref(null)
+
+            // ==== Comments ====
+            const myComment = ref(null)
+            const allComments = ref([])
+            const commentText = ref('')
+
+            // ==== Comment-based Recommendations ====
+            const recommendMovies = ref([])
+
+            async function openSidebar(movie) {
+                selectedMovie.value = movie
+                showSidebar.value = true
+
+                await loadMyComment(movie.movieId)
+                await loadAllComments(movie.movieId)
+                // Optional: load initial recommendations if there is existing comment
+                if (commentText.value && commentText.value.trim()) {
+                    await recommendFromComment()
+                }
+            }
+
+            function closeSidebar() {
+                showSidebar.value = false
+                setTimeout(() => {
+                    selectedMovie.value = null
+                }, 300)
             }
 
             // ==== Genre Operation ====
             const showGenres = ref(false)
-            const genres = ref({{user_genres | tojson}}) // If this place shows error, please check the format: ref({{user_genres | tojson}})
+            const genres = ref({{user_genres | tojson}})
 
             function updateGenre(_id) {
                 let id = _id.toString()
                 const index = genres.value.indexOf(id);
-                if (index > -1) {
-                    genres.value.splice(index, 1);
+
+                if (id === '0') {
+                    if (index > -1) {
+                        if (genres.value.length > 1) {
+                            genres.value.splice(index, 1);
+                        }
+                    } else {
+                        genres.value = ['0'];
+                    }
                 } else {
-                    genres.value.push(id);
-                    genres.value = genres.value.sort(function (a, b) {
-                        return a - b;
-                    });
+                    if (index > -1) {
+                        genres.value.splice(index, 1);
+                        if (genres.value.length === 0) {
+                            genres.value = ['0'];
+                        }
+                    } else {
+                        const allIndex = genres.value.indexOf('0');
+                        if (allIndex > -1) {
+                            genres.value.splice(allIndex, 1);
+                        }
+                        genres.value.push(id);
+                        genres.value = genres.value.sort(function (a, b) {
+                            return a - b;
+                        });
+                    }
                 }
             }
 
@@ -317,6 +744,9 @@
             }
 
             function saveGenres() {
+                if (genres.value.length === 0) {
+                    genres.value = ['0'];
+                }
                 document.cookie = "user_genres=" + genres.value;
                 document.cookie = "user_rates=; Max-Age=0";
                 reloadPage()
@@ -324,7 +754,6 @@
 
             // ==== Movie Rate Operation ====
             const showMovieRate = ref(false)
-            const userRates = ref({{user_rates | tojson}}) // If this place shows error, please check the format: ref({{user_rates | tojson}})
 
             function getRate(movieId) {
                 for (let index in userRates.value) {
@@ -333,12 +762,11 @@
                         return [index, record[2]]
                     }
                 }
-
                 return [-1, -1]
             }
 
-            function updateRate(movieId, rate) {
-                let record = '611' + '|' + movieId + '|' + rate + '|' + '0' //  total 610 users, so the new user id is 944
+            async function updateRate(movieId, rate) {
+                let record = currentUserId.value + '|' + movieId + '|' + rate + '|' + '0'
 
                 const index = getRate(movieId)[0];
                 if (index > -1) {
@@ -347,27 +775,257 @@
                     userRates.value.push(record);
                 }
                 document.cookie = "user_rates=" + userRates.value;
-            }
-            // ==== Movie Like Operation ====
-            const userLikes = ref({{user_likes | tojson}}) // If this place shows error, please check the format: ref({{user_likes | tojson}})
 
-            function updateLike(_movieId) {
+                try {
+                    const formData = new FormData()
+                    formData.append('movieId', movieId)
+                    formData.append('rating', rate)
+                    await fetch('/api/user/rating', {
+                        method: 'POST',
+                        body: formData
+                    })
+                } catch (error) {
+                    console.error('Failed to save rating:', error)
+                }
+
+                const movieIdStr = movieId.toString()
+                const alreadyLiked = userLikes.value.includes(movieIdStr)
+                const alreadyDisliked = userDislikes.value.includes(movieIdStr)
+
+                if (!alreadyLiked && !alreadyDisliked) {
+                    if (rate <= 2) {
+                        await updateDislike(movieId)
+                    } else {
+                        await updateLike(movieId)
+                    }
+                }
+            }
+
+            // ==== Movie Like Operation ====
+
+            async function updateLike(_movieId) {
                 let movieId = _movieId.toString()
                 const index = userLikes.value.indexOf(movieId);
+                let action = 'like'
+
                 if (index > -1) {
                     userLikes.value.splice(index, 1);
+                    action = 'remove'
                 } else {
                     userLikes.value.push(movieId);
+                    const dislikeIndex = userDislikes.value.indexOf(movieId);
+                    if (dislikeIndex > -1) {
+                        userDislikes.value.splice(dislikeIndex, 1);
+                    }
                 }
 
                 document.cookie = "user_likes=" + userLikes.value;
+                document.cookie = "user_dislikes=" + userDislikes.value;
 
-                reloadPage();
+                try {
+                    const formData = new FormData()
+                    formData.append('movieId', parseInt(movieId))
+                    formData.append('action', action)
+                    await fetch('/api/user/like', {
+                        method: 'POST',
+                        body: formData
+                    })
+                } catch (error) {
+                    console.error('Failed to save like:', error)
+                }
+
+                if (!showSidebar.value) {
+                    reloadPage();
+                }
             }
+
+            async function updateDislike(_movieId) {
+                let movieId = _movieId.toString()
+                const index = userDislikes.value.indexOf(movieId);
+                let action = 'dislike'
+
+                if (index > -1) {
+                    userDislikes.value.splice(index, 1);
+                    action = 'remove'
+                } else {
+                    userDislikes.value.push(movieId);
+                    const likeIndex = userLikes.value.indexOf(movieId);
+                    if (likeIndex > -1) {
+                        userLikes.value.splice(likeIndex, 1);
+                    }
+                }
+
+                document.cookie = "user_dislikes=" + userDislikes.value;
+                document.cookie = "user_likes=" + userLikes.value;
+
+                try {
+                    const formData = new FormData()
+                    formData.append('movieId', parseInt(movieId))
+                    formData.append('action', action)
+                    await fetch('/api/user/like', {
+                        method: 'POST',
+                        body: formData
+                    })
+                } catch (error) {
+                    console.error('Failed to save dislike:', error)
+                }
+
+                if (!showSidebar.value) {
+                    reloadPage();
+                }
+            }
+
             function inLikes(movieId) {
                 return userLikes.value.includes(movieId.toString())
             }
 
+            function inDislikes(movieId) {
+                return userDislikes.value.includes(movieId.toString())
+            }
+
+            // ==== Comment Functions ====
+
+            async function loadMyComment(movieId) {
+                try {
+                    const response = await fetch(`/api/movie/${movieId}/my-comment`)
+                    const data = await response.json()
+
+                    if (data.success && data.comment) {
+                        myComment.value = data.comment
+                        commentText.value = data.comment.text
+                    } else {
+                        myComment.value = null
+                        commentText.value = ''
+                    }
+                } catch (error) {
+                    console.error('Failed to load my comment:', error)
+                }
+            }
+
+            async function loadAllComments(movieId) {
+                try {
+                    const response = await fetch(`/api/movie/${movieId}/comments`)
+                    const data = await response.json()
+
+                    if (data.success) {
+                        allComments.value = data.comments
+                    }
+                } catch (error) {
+                    console.error('Failed to load comments:', error)
+                }
+            }
+
+            async function submitComment(label) {
+                if (!commentText.value.trim()) {
+                    alert('Please enter your comment')
+                    return
+                }
+
+                const movieId = selectedMovie.value.movieId
+                const formData = new FormData()
+                formData.append('text', commentText.value)
+                formData.append('label', label)
+
+                try {
+                    const response = await fetch(`/api/movie/${movieId}/comment`, {
+                        method: 'POST',
+                        body: formData
+                    })
+
+                    const data = await response.json()
+
+                    if (data.success) {
+                        alert(data.message)
+                        await loadMyComment(movieId)
+                        await loadAllComments(movieId)
+                        await recommendFromComment()
+                    } else {
+                        alert('Failed: ' + data.message)
+                    }
+                } catch (error) {
+                    console.error('Failed to submit comment:', error)
+                    alert('Failed to submit comment, please try again')
+                }
+            }
+
+            async function deleteMyComment() {
+                if (!confirm('Are you sure you want to delete this comment?')) {
+                    return
+                }
+
+                const movieId = selectedMovie.value.movieId
+
+                try {
+                    const response = await fetch(`/api/movie/${movieId}/comment`, {
+                        method: 'DELETE'
+                    })
+
+                    const data = await response.json()
+
+                    if (data.success) {
+                        alert('Comment deleted')
+                        myComment.value = null
+                        commentText.value = ''
+                        await loadAllComments(movieId)
+                        recommendMovies.value = []
+                    } else {
+                        alert('Failed: ' + data.message)
+                    }
+                } catch (error) {
+                    console.error('Failed to delete comment:', error)
+                    alert('Failed to delete comment, please try again')
+                }
+            }
+
+            // Comment-based recommendation
+            async function recommendFromComment() {
+                console.log('recommendFromComment called, text =', commentText.value)
+                if (!commentText.value || !commentText.value.trim()) {
+                    recommendMovies.value = []
+                    return
+                }
+                try {
+                    const resp = await fetch('/api/recommend-from-comment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            text: commentText.value,
+                            top_k: 5
+                        })
+                    })
+                    const data = await resp.json()
+                    console.log('recommend-from-comment response:', data)
+                    if (data.success) {
+                        recommendMovies.value = data.movies || []
+                    } else {
+                        console.error('Recommend failed:', data.message)
+                    }
+                } catch (e) {
+                    console.error('Failed to recommend from comment:', e)
+                }
+            }
+
+
+            function formatTimestamp(timestamp) {
+                const date = new Date(timestamp * 1000)
+                const now = new Date()
+                const diff = now - date
+
+                if (diff < 60000) {
+                    return 'Just now'
+                }
+                if (diff < 3600000) {
+                    return Math.floor(diff / 60000) + ' minutes ago'
+                }
+                if (diff < 86400000) {
+                    return Math.floor(diff / 3600000) + ' hours ago'
+                }
+                if (diff < 604800000) {
+                    return Math.floor(diff / 86400000) + ' days ago'
+                }
+
+                return date.toLocaleDateString()
+            }
 
             function reloadPage() {
                 location.reload();
@@ -376,7 +1034,31 @@
             return {
                 isLoading,
                 isActivityNavBar,
-                cleanAll,
+
+                // User ID
+                currentUserId,
+                switchUser,
+
+                recommendationsData,
+                likesSimilarsData,
+                likesData,
+
+                showSidebar,
+                selectedMovie,
+                openSidebar,
+                closeSidebar,
+
+                // Comments
+                myComment,
+                allComments,
+                commentText,
+                submitComment,
+                deleteMyComment,
+                formatTimestamp,
+
+                // Comment-based recommendations
+                recommendMovies,
+                recommendFromComment,
 
                 showGenres,
                 genres,
@@ -390,49 +1072,19 @@
                 updateRate,
 
                 userLikes,
+                userDislikes,
                 updateLike,
+                updateDislike,
                 inLikes,
+                inDislikes,
 
                 reloadPage,
             }
         }
     })
 
-    // Reset the Vue delimiters and Mount it
     app.config.compilerOptions.delimiters = ['[[', ']]']
     app.mount('#app')
-
 </script>
-<style>
-    .modal-content, .modal-card {
-        width: calc(100% - 4em);
-
-        @media screen and (min-width: 1022px) {
-            width: 1022px;
-        }
-    }
-
-    .card {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .card img {
-        object-fit: cover;
-    }
-
-    .card-footer {
-        margin-top: auto;
-    }
-
-    .checked {
-        color: red;
-    }
-
-    .star {
-        cursor: pointer;
-    }
-</style>
 </body>
 </html>
