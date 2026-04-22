@@ -1,4 +1,4 @@
-## This main branch is the orginal program, don't submit or merge to this branch, You can check different task in different branch
+## This main branch now is for merge the total program together
 ## Create an environment
 
 ```
