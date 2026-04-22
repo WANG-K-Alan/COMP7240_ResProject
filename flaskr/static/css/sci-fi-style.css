@@ -1,0 +1,784 @@
+/* ========================================
+   科幻风格 - 现代化电影网页样式
+   ======================================== */
+
+/* 全局变量 */
+:root {
+    /* 科幻色彩 */
+    --neon-blue: #00f3ff;
+    --neon-purple: #b537f2;
+    --neon-pink: #ff006e;
+    --neon-green: #39ff14;
+    --cyber-yellow: #ffea00;
+    
+    /* 背景色 */
+    --bg-dark: #0a0e27;
+    --bg-darker: #050814;
+    --bg-card: rgba(15, 23, 42, 0.8);
+    --bg-glass: rgba(255, 255, 255, 0.05);
+    
+    /* 文字色 */
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    
+    /* 边框和阴影 */
+    --border-glow: rgba(0, 243, 255, 0.3);
+    --shadow-neon: 0 0 20px rgba(0, 243, 255, 0.5);
+    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* 全局样式重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: linear-gradient(135deg, var(--bg-darker) 0%, var(--bg-dark) 100%);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    font-family: 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* 动态背景效果 */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(0, 243, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(181, 55, 242, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 20%, rgba(255, 0, 110, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* 网格背景 */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+#app {
+    position: relative;
+    z-index: 1;
+}
+
+/* ========================================
+   导航栏样式
+   ======================================== */
+.navbar {
+    background: rgba(10, 14, 39, 0.95) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-glow);
+    box-shadow: 0 4px 20px rgba(0, 243, 255, 0.1);
+    padding: 0.5rem 0;
+}
+
+.navbar-brand .navbar-item {
+    color: var(--neon-blue) !important;
+    font-weight: 700;
+    font-size: 1.5rem;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+    transition: all 0.3s ease;
+}
+
+.navbar-brand .navbar-item:hover {
+    color: var(--neon-purple) !important;
+    text-shadow: 0 0 20px rgba(181, 55, 242, 0.8);
+    transform: scale(1.05);
+}
+
+.navbar-item {
+    color: var(--text-secondary) !important;
+    transition: all 0.3s ease;
+}
+
+.navbar-item:hover,
+.navbar-item.is-active {
+    background-color: rgba(0, 243, 255, 0.1) !important;
+    color: var(--neon-blue) !important;
+}
+
+.navbar-burger span {
+    background-color: var(--neon-blue) !important;
+}
+
+/* ========================================
+   按钮样式
+   ======================================== */
+.button {
+    border: 1px solid var(--border-glow);
+    background: var(--bg-glass);
+    color: var(--text-primary);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(0, 243, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.button:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+.button:hover {
+    border-color: var(--neon-blue);
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+    transform: translateY(-2px);
+}
+
+.button.is-primary {
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+    border: none;
+    color: white;
+    box-shadow: 0 4px 15px rgba(0, 243, 255, 0.3);
+}
+
+.button.is-primary:hover {
+    box-shadow: 0 6px 25px rgba(0, 243, 255, 0.5);
+    transform: translateY(-3px);
+}
+
+.button.is-info {
+    background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+    border: none;
+    color: white;
+}
+
+.button.is-danger {
+    background: linear-gradient(135deg, var(--neon-pink), #ff4757);
+    border: none;
+    color: white;
+}
+
+.button.is-link {
+    background: linear-gradient(135deg, var(--neon-blue), #4834df);
+    border: none;
+    color: white;
+}
+
+/* ========================================
+   卡片样式
+   ======================================== */
+.card {
+    background: var(--bg-card) !important;
+    border: 1px solid rgba(0, 243, 255, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(10px);
+}
+
+.card:hover {
+    transform: translateY(-10px) scale(1.02);
+    border-color: var(--neon-blue);
+    box-shadow: 
+        0 15px 40px rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(0, 243, 255, 0.3),
+        inset 0 0 20px rgba(0, 243, 255, 0.1);
+}
+
+.card-image {
+    position: relative;
+    overflow: hidden;
+}
+
+.card-image::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        180deg,
+        transparent 0%,
+        rgba(10, 14, 39, 0.8) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.card:hover .card-image::after {
+    opacity: 1;
+}
+
+.card-image img {
+    transition: transform 0.5s ease;
+    filter: brightness(0.9);
+}
+
+.card:hover .card-image img {
+    transform: scale(1.1);
+    filter: brightness(1.1);
+}
+
+.card-content {
+    background: rgba(10, 14, 39, 0.6);
+    color: var(--text-primary);
+}
+
+.card-footer {
+    background: rgba(5, 8, 20, 0.8);
+    border-top: 1px solid rgba(0, 243, 255, 0.2);
+}
+
+/* ========================================
+   Hero区域样式
+   ======================================== */
+.hero.is-info {
+    background: linear-gradient(
+        135deg,
+        rgba(0, 243, 255, 0.1) 0%,
+        rgba(181, 55, 242, 0.1) 100%
+    );
+    border: 1px solid var(--border-glow);
+    border-radius: 16px;
+    margin: 2rem 0;
+    backdrop-filter: blur(10px);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.3),
+        inset 0 0 40px rgba(0, 243, 255, 0.05);
+}
+
+.hero .title {
+    color: var(--neon-blue);
+    text-shadow: 0 0 20px rgba(0, 243, 255, 0.5);
+    font-weight: 700;
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from {
+        text-shadow: 0 0 20px rgba(0, 243, 255, 0.5);
+    }
+    to {
+        text-shadow: 0 0 30px rgba(0, 243, 255, 0.8), 0 0 40px rgba(181, 55, 242, 0.4);
+    }
+}
+
+.hero .subtitle {
+    color: var(--text-secondary);
+}
+
+/* ========================================
+   Section样式
+   ======================================== */
+.section {
+    position: relative;
+}
+
+.section .is-size-4 {
+    color: var(--neon-blue);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+    position: relative;
+    display: inline-block;
+}
+
+.section .is-size-4::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--neon-blue), transparent);
+    box-shadow: 0 0 10px var(--neon-blue);
+}
+
+/* ========================================
+   标签样式
+   ======================================== */
+.tag {
+    background: rgba(0, 243, 255, 0.2) !important;
+    color: var(--neon-blue) !important;
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.tag:hover {
+    background: rgba(0, 243, 255, 0.3) !important;
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+}
+
+/* ========================================
+   表单元素样式
+   ======================================== */
+.select select,
+.input {
+    background: var(--bg-glass) !important;
+    border: 1px solid var(--border-glow) !important;
+    color: var(--text-primary) !important;
+    transition: all 0.3s ease;
+}
+
+.select select:hover,
+.input:hover {
+    border-color: var(--neon-blue) !important;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+}
+
+.select select:focus,
+.input:focus {
+    border-color: var(--neon-blue) !important;
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.5) !important;
+}
+
+.select::after {
+    border-color: var(--neon-blue) !important;
+}
+
+/* 下拉框选项样式 */
+.select select option {
+    background: #1a1f3a !important;
+    color: #ffffff !important;
+    padding: 8px;
+    font-weight: 500;
+}
+
+.select select option:hover,
+.select select option:checked {
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple)) !important;
+    color: #ffffff !important;
+}
+
+/* ========================================
+   模态框样式
+   ======================================== */
+.modal-background {
+    background-color: rgba(5, 8, 20, 0.9) !important;
+    backdrop-filter: blur(5px);
+}
+
+.modal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal-card-head,
+.modal-card-foot {
+    background: rgba(5, 8, 20, 0.8);
+    border-color: rgba(0, 243, 255, 0.2);
+}
+
+.modal-card-title {
+    color: var(--neon-blue);
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+}
+
+.modal-card-body {
+    background: var(--bg-card);
+}
+
+/* ========================================
+   点赞按钮特效
+   ======================================== */
+.checked {
+    color: var(--neon-pink) !important;
+    animation: pulse 1s ease-in-out;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+}
+
+/* 星星评分样式 */
+.star {
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    font-size: 1.2rem;
+}
+
+.star:hover,
+.star.checked {
+    color: var(--cyber-yellow);
+    text-shadow: 0 0 10px var(--cyber-yellow);
+}
+
+/* ========================================
+   Footer样式
+   ======================================== */
+.footer {
+    background: rgba(5, 8, 20, 0.95);
+    border-top: 1px solid var(--border-glow);
+    color: var(--text-secondary);
+    backdrop-filter: blur(10px);
+}
+
+.footer a {
+    color: var(--neon-blue);
+    transition: all 0.3s ease;
+}
+
+.footer a:hover {
+    color: var(--neon-purple);
+    text-shadow: 0 0 10px rgba(181, 55, 242, 0.5);
+}
+
+/* ========================================
+   加载动画
+   ======================================== */
+.hero.is-fullheight {
+    background: var(--bg-darker);
+}
+
+.hero.is-fullheight .title {
+    color: var(--neon-blue);
+    animation: loading 1.5s ease-in-out infinite;
+}
+
+@keyframes loading {
+    0%, 100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+/* ========================================
+   通知样式
+   ======================================== */
+.notification {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-glow);
+    color: var(--text-primary) !important;
+    border-radius: 12px;
+}
+
+.notification.is-warning {
+    border-color: var(--cyber-yellow);
+    background: rgba(255, 234, 0, 0.1) !important;
+}
+
+/* ========================================
+   Level样式（筛选区域）
+   ======================================== */
+.level {
+    background: var(--bg-glass);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-glow);
+    backdrop-filter: blur(10px);
+    margin-bottom: 2rem;
+}
+
+/* ========================================
+   滚动条样式
+   ======================================== */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-darker);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--neon-blue), var(--neon-purple));
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--neon-purple), var(--neon-pink));
+}
+
+/* ========================================
+   响应式调整
+   ======================================== */
+@media screen and (max-width: 768px) {
+    .navbar-brand .navbar-item {
+        font-size: 1.2rem;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px) scale(1.01);
+    }
+    
+    .section .is-size-4 {
+        font-size: 1.2rem;
+    }
+}
+
+/* ========================================
+   动画效果
+   ======================================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.card:nth-child(1) { animation-delay: 0.1s; }
+.card:nth-child(2) { animation-delay: 0.2s; }
+.card:nth-child(3) { animation-delay: 0.3s; }
+.card:nth-child(4) { animation-delay: 0.4s; }
+.card:nth-child(5) { animation-delay: 0.5s; }
+.card:nth-child(6) { animation-delay: 0.6s; }
+
+/* ========================================
+   玻璃态效果增强
+   ======================================== */
+.glass-effect {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================
+   霓虹边框动画
+   ======================================== */
+@keyframes neon-border {
+    0%, 100% {
+        border-color: var(--neon-blue);
+        box-shadow: 0 0 10px var(--neon-blue);
+    }
+    33% {
+        border-color: var(--neon-purple);
+        box-shadow: 0 0 10px var(--neon-purple);
+    }
+    66% {
+        border-color: var(--neon-pink);
+        box-shadow: 0 0 10px var(--neon-pink);
+    }
+}
+
+.neon-border-animate {
+    animation: neon-border 3s ease-in-out infinite;
+}
+
+/* ========================================
+   文字发光效果
+   ======================================== */
+.text-glow {
+    text-shadow: 0 0 10px currentColor;
+}
+
+.text-glow-blue {
+    color: var(--neon-blue);
+    text-shadow: 0 0 10px var(--neon-blue);
+}
+
+.text-glow-purple {
+    color: var(--neon-purple);
+    text-shadow: 0 0 10px var(--neon-purple);
+}
+
+.text-glow-pink {
+    color: var(--neon-pink);
+    text-shadow: 0 0 10px var(--neon-pink);
+}
+
+/* ========================================
+   电影卡片悬停遮罩效果（显示overview）
+   ======================================== */
+.movie-card-with-overlay {
+    position: relative;
+}
+
+.movie-card-with-overlay .card-image {
+    position: relative;
+    overflow: hidden;
+}
+
+.image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        180deg,
+        rgba(10, 14, 39, 0.85) 0%,
+        rgba(10, 14, 39, 0.95) 100%
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    z-index: 10;
+}
+
+.movie-card-with-overlay:hover .image-overlay {
+    opacity: 1;
+}
+
+.overlay-text {
+    color: var(--text-primary);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    text-align: center;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* 评分弹窗中的overview样式 */
+.overview-text {
+    line-height: 1.3;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+/* ========================================
+   分页导航样式
+   ======================================== */
+.pagination {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+
+.pagination-previous,
+.pagination-next,
+.pagination-link {
+    background: var(--bg-glass) !important;
+    border: 1px solid var(--border-glow) !important;
+    color: var(--text-primary) !important;
+    transition: all 0.3s ease;
+}
+
+.pagination-previous:hover:not([disabled]),
+.pagination-next:hover:not([disabled]),
+.pagination-link:hover:not(.is-current) {
+    background: rgba(0, 243, 255, 0.2) !important;
+    border-color: var(--neon-blue) !important;
+    color: var(--neon-blue) !important;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.pagination-link.is-current {
+    background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple)) !important;
+    border-color: var(--neon-blue) !important;
+    color: white !important;
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.5);
+}
+
+.pagination-previous[disabled],
+.pagination-next[disabled] {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-color: rgba(0, 243, 255, 0.1) !important;
+    color: var(--text-muted) !important;
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.pagination-ellipsis {
+    color: var(--text-secondary) !important;
+}
+
+/* 分页列表样式 */
+.pagination-list {
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.pagination-list li {
+    margin: 0.25rem;
+}
+
+/* 响应式分页 */
+@media screen and (max-width: 768px) {
+    .pagination-list {
+        display: none;
+    }
+    
+    .pagination-previous,
+    .pagination-next {
+        flex-grow: 1;
+    }
+}
+
+/* ========================================
+   My Likes页面 - 选中卡片样式
+   ======================================== */
+.selected-card {
+    border: 2px solid var(--neon-blue) !important;
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.5) !important;
+    transform: scale(1.02);
+}
+
+.card-header {
+    background: rgba(10, 14, 39, 0.8);
+    border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+}
+
+.card-header .checkbox {
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.card-header .checkbox:hover {
+    color: var(--neon-blue);
+}
+
+.card-header .checkbox input[type="checkbox"] {
+    cursor: pointer;
+    transform: scale(1.2);
+}
