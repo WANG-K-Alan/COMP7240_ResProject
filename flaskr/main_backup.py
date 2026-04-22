@@ -1,5 +1,3 @@
-from . import pipeline
-
 from flask import (
     Blueprint, render_template, request
 )
@@ -10,8 +8,6 @@ from surprise import Reader
 from surprise import KNNBasic, KNNWithMeans
 from surprise import Dataset
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.feature_extraction.text import TfidfVectorizer
-import numpy as np
 
 bp = Blueprint('main', __name__, url_prefix='/')
 
@@ -95,76 +91,53 @@ def getMoviesByGenres(user_genres):
 # Modify this function
 def getRecommendationBy(user_rates):
     results = []
-    message = "No recommendations."
-    
     if len(user_rates) > 0:
-        user_rates_df = ratesFromUser(user_rates)
-        user_rates_df['userId'] = 611
-        
-        # 多路召回
-        candidates_dict = pipeline.multi_recall(user_rates_df, rates, movies)
-        
-        if candidates_dict:
-            # DeepSeek 精排
-            ranked_ids, reasoning = pipeline.rank_with_deepseek(
-                candidates_dict, user_rates_df, movies, top_k=12, apply_rerank=True
-            )
-            
-            if ranked_ids:
-                results = movies[movies['movieId'].isin(ranked_ids)]
-                # 保持 DeepSeek 返回的顺序
-                results = results.set_index('movieId').loc[ranked_ids].reset_index()
-                message = f"DeepSeek AI Recommendation: {reasoning}"
-    
+        # Initialize a reader with rating scale from 1 to 5
+        reader = Reader(rating_scale=(1, 5))
+        # Define the algorithm
+        algo = KNNWithMeans(sim_options={'name': 'pearson', 'user_based': True})
+        # Convert the user's ratings (stored in "user_rates") to the Dataset format
+        user_rates = ratesFromUser(user_rates)
+        # Add the user’s rating information into the Movielens dataset
+        training_rates = pd.concat([rates, user_rates], ignore_index=True)
+        # Load the combined data as a training dataset 
+        training_data = Dataset.load_from_df(training_rates, reader=reader)
+        # Build a full training set from the dataset
+        trainset = training_data.build_full_trainset()
+        # Fit the algorithm using the trainset
+        algo.fit(trainset)
+        all_movie_ids = movies['movieId'].unique()
+        # Predict ratings for all movies for the specified user (assuming user ID 611)
+        user_id = 611 
+        rated_movie_ids = user_rates[user_rates['userId'] == user_id]['movieId'].tolist()
+        predictions = [algo.predict(user_id, movie_id) for movie_id in all_movie_ids if movie_id not in rated_movie_ids]
+        top_predictions = [pred for pred in predictions]
+        # sort predicted ratings in a descending order
+        top_predictions.sort(key=lambda x: x.est, reverse=True)
+        # Select the top-K items (e.g., 12)
+        top_movie_ids = [pred.iid for pred in top_predictions[:12]]
+        results = movies[movies['movieId'].isin(top_movie_ids)]
+
+
+    # Return the result
     if len(results) > 0:
-        return results.to_dict('records'), message
-    return results, message
+        return results.to_dict('records'), "These movies are recommended based on your ratings."
+    return results, "No recommendations."
+
 
 
 # Modify this function
 def getLikedSimilarBy(user_likes):
     results = []
     if len(user_likes) > 0:
-        # ========== 1. 类型标签相似度计算 ==========
-        # 原有的 Multi-Hot 表示函数
-        genre_matrix, genre_df, feature_list = item_representation_based_movie_genres(movies)
-        user_profile_genre = build_user_profile(user_likes, genre_df, feature_list, weighted=False, normalized=True)
-        genre_similarities = cosine_similarity([user_profile_genre.values], genre_matrix).flatten()
-        
-        # ========== 2. TF‑IDF 文本相似度计算 ==========
-        corpus = movies['overview'].fillna('').tolist()
-        vectorizer = TfidfVectorizer(stop_words='english', max_features=5000)
-        tfidf_matrix = vectorizer.fit_transform(corpus)
-        
-        liked_indices = movies[movies['movieId'].isin(user_likes)].index.tolist()
-        if not liked_indices:
-            return [], "No liked movies found."
-        
-        user_profile_text = tfidf_matrix[liked_indices].mean(axis=0)
-        user_profile_text = np.asarray(user_profile_text).reshape(1, -1)
-        text_similarities = cosine_similarity(user_profile_text, tfidf_matrix).flatten()
-        
-        # ========== 3. 加权融合 ==========
-        alpha = 0.4   # 类型标签权重
-        beta = 0.6    # TF‑IDF 文本权重
-        
-        # 将两种相似度标准化到 [0,1] 区间
-        genre_sim_norm = (genre_similarities - genre_similarities.min()) / (genre_similarities.max() - genre_similarities.min() + 1e-8)
-        text_sim_norm = (text_similarities - text_similarities.min()) / (text_similarities.max() - text_similarities.min() + 1e-8)
-        
-        combined_similarities = alpha * genre_sim_norm + beta * text_sim_norm
-        
-        # ========== 4. 排序并排除已喜欢电影 ==========
-        sim_df = pd.DataFrame({
-            'movieId': movies['movieId'],
-            'similarity': combined_similarities
-        })
-        sim_df = sim_df[~sim_df['movieId'].isin(user_likes)]
-        top_movie_ids = sim_df.sort_values('similarity', ascending=False).head(12)['movieId'].tolist()
-        results = movies[movies['movieId'].isin(top_movie_ids)]
-    
+        # Step 1: Representing items with multi-hot vectors
+        item_rep_matrix, item_rep_vector, feature_list = item_representation_based_movie_genres(movies)
+        # Step 2: Building user profile
+        user_profile = build_user_profile(user_likes, item_rep_vector, feature_list)
+        # Step 3: Predicting user interest in items
+        results = generate_recommendation_results(user_profile, item_rep_matrix, item_rep_vector, 12)
     if len(results) > 0:
-        return results.to_dict('records'), "These movies are recommended based on genre and plot similarity to your liked movies."
+        return results.to_dict('records'), "The movies are similar to your liked movies."
     return results, "No similar movies found."
 
 
