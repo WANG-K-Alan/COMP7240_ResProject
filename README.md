@@ -62,6 +62,7 @@ ranked_ids, reasoning = pipeline.rank_with_deepseek(
 def getLikedSimilarBy(user_likes):....
 The weighted fusion recommendation list will include works of the same genre as the favorite movies, as well as movies of different genres but related to content, enhancing diversity and interpretability.
 
+## This main branch now is for merge the total program together
 ## Create an environment
 
 ```
