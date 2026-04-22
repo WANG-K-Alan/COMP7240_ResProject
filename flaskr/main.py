@@ -385,50 +385,68 @@ def getRecommendationBy(user_rates):
 
 
 # Modify this function
-def getLikedSimilarBy(user_likes):
+def getLikedSimilarBy(user_likes, user_dislikes):
+    """
+    根据用户的喜欢和不喜欢电影，综合类型标签和剧情文本相似度，推荐相似电影。
+    返回 (results, message) 元组。
+    """
     results = []
-    if len(user_likes) > 0:
-        # ========== 1. 类型标签相似度计算 ==========
-        # 原有的 Multi-Hot 表示函数
-        genre_matrix, genre_df, feature_list = item_representation_based_movie_genres(movies)
-        user_profile_genre = build_user_profile(user_likes, genre_df, feature_list, weighted=False, normalized=True)
-        genre_similarities = cosine_similarity([user_profile_genre.values], genre_matrix).flatten()
-        
-        # ========== 2. TF‑IDF 文本相似度计算 ==========
-        corpus = movies['overview'].fillna('').tolist()
-        vectorizer = TfidfVectorizer(stop_words='english', max_features=5000)
-        tfidf_matrix = vectorizer.fit_transform(corpus)
-        
-        liked_indices = movies[movies['movieId'].isin(user_likes)].index.tolist()
-        if not liked_indices:
-            return [], "No liked movies found."
-        
-        user_profile_text = tfidf_matrix[liked_indices].mean(axis=0)
-        user_profile_text = np.asarray(user_profile_text).reshape(1, -1)
-        text_similarities = cosine_similarity(user_profile_text, tfidf_matrix).flatten()
-        
-        # ========== 3. 加权融合 ==========
-        alpha = 0.4   # 类型标签权重
-        beta = 0.6    # TF‑IDF 文本权重
-        
-        # 将两种相似度标准化到 [0,1] 区间
-        genre_sim_norm = (genre_similarities - genre_similarities.min()) / (genre_similarities.max() - genre_similarities.min() + 1e-8)
-        text_sim_norm = (text_similarities - text_similarities.min()) / (text_similarities.max() - text_similarities.min() + 1e-8)
-        
-        combined_similarities = alpha * genre_sim_norm + beta * text_sim_norm
-        
-        # ========== 4. 排序并排除已喜欢电影 ==========
-        sim_df = pd.DataFrame({
-            'movieId': movies['movieId'],
-            'similarity': combined_similarities
-        })
-        sim_df = sim_df[~sim_df['movieId'].isin(user_likes)]
-        top_movie_ids = sim_df.sort_values('similarity', ascending=False).head(12)['movieId'].tolist()
-        results = movies[movies['movieId'].isin(top_movie_ids)]
+    message = "No similar movies found."
     
+    if len(user_likes) == 0:
+        return results, "Please like some movies first to get similar recommendations."
+
+    # ========== 1. 类型标签相似度计算 ==========
+    genre_matrix, genre_df, feature_list = item_representation_based_movie_genres(movies)
+    
+    # 构建用户画像（喜欢 - 不喜欢）
+    user_profile_genre = build_user_profile(
+        liked_movieIds=user_likes,
+        disliked_movieIds=user_dislikes if user_dislikes else [],
+        item_rep_vector=genre_df,
+        feature_list=feature_list,
+        normalized=True
+    )
+    
+    genre_similarities = cosine_similarity([user_profile_genre.values], genre_matrix).flatten()
+
+    # ========== 2. TF‑IDF 文本相似度计算 ==========
+    corpus = movies['overview'].fillna('').tolist()
+    vectorizer = TfidfVectorizer(stop_words='english', max_features=5000)
+    tfidf_matrix = vectorizer.fit_transform(corpus)
+    
+    liked_indices = movies[movies['movieId'].isin(user_likes)].index.tolist()
+    if not liked_indices:
+        return [], "No liked movies found."
+    
+    user_profile_text = tfidf_matrix[liked_indices].mean(axis=0)
+    user_profile_text = np.asarray(user_profile_text).reshape(1, -1)
+    text_similarities = cosine_similarity(user_profile_text, tfidf_matrix).flatten()
+
+    # ========== 3. 加权融合 ==========
+    alpha = 0.4   # 类型标签权重
+    beta  = 0.6   # TF‑IDF 文本权重
+
+    # 标准化到 [0,1]
+    genre_sim_norm = (genre_similarities - genre_similarities.min()) / (genre_similarities.max() - genre_similarities.min() + 1e-8)
+    text_sim_norm  = (text_similarities - text_similarities.min()) / (text_similarities.max() - text_similarities.min() + 1e-8)
+
+    combined_similarities = alpha * genre_sim_norm + beta * text_sim_norm
+
+    # ========== 4. 排序并排除已喜欢/不喜欢电影 ==========
+    exclude_ids = set(user_likes) | set(user_dislikes)  # 排除已标记的电影
+    sim_df = pd.DataFrame({
+        'movieId': movies['movieId'],
+        'similarity': combined_similarities
+    })
+    sim_df = sim_df[~sim_df['movieId'].isin(exclude_ids)]
+    top_movie_ids = sim_df.sort_values('similarity', ascending=False).head(12)['movieId'].tolist()
+    results = movies[movies['movieId'].isin(top_movie_ids)]
+
     if len(results) > 0:
-        return results.to_dict('records'), "These movies are recommended based on genre and plot similarity to your liked movies."
-    return results, "No similar movies found."
+        message = "These movies are recommended based on genre and plot similarity to your liked movies."
+    
+    return results.to_dict('records'), message
 
 
 # Step 1: Representing items with multi-hot vectors
