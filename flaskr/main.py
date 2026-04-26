@@ -35,21 +35,42 @@ def index():
         # Default select "All" (id=0)
         user_genres = ['0']
     
+    # Get current user ID
+    current_user_id = get_current_user_id()
+    
+    # Load user data from CSV if Cookie is empty
     user_rates = request.cookies.get('user_rates')
     if user_rates:
         user_rates = user_rates.split(",")
     else:
-        user_rates = []
+        # Load from CSV
+        user_ratings_df = getUserRatings(current_user_id)
+        if len(user_ratings_df) > 0:
+            user_rates = []
+            for _, row in user_ratings_df.iterrows():
+                user_rates.append(f"{int(row['userId'])}|{int(row['movieId'])}|{int(row['rating'])}|0")
+        else:
+            user_rates = []
+    
     user_likes = request.cookies.get('user_likes')
+    user_dislikes = request.cookies.get('user_dislikes')
     if user_likes:
         user_likes = user_likes.split(",")
     else:
         user_likes = []
-    user_dislikes = request.cookies.get('user_dislikes')
     if user_dislikes:
         user_dislikes = user_dislikes.split(",")
     else:
         user_dislikes = []
+    
+    # If Cookie is empty, load from CSV
+    if not user_likes and not user_dislikes:
+        user_likes_df = getUserLikesData(current_user_id)
+        if len(user_likes_df) > 0:
+            likes_list = user_likes_df[user_likes_df['action'] == 'like']['movieId'].tolist()
+            dislikes_list = user_likes_df[user_likes_df['action'] == 'dislike']['movieId'].tolist()
+            user_likes = [str(id) for id in likes_list]
+            user_dislikes = [str(id) for id in dislikes_list]
     
     
     # Get movies by selected genres (for rating popup)
@@ -97,7 +118,7 @@ def index():
                            user_rates=user_rates,
                            user_likes=user_likes,
                            user_dislikes=user_dislikes,
-                           current_user_id=get_current_user_id(),
+                           current_user_id=current_user_id,
                            default_genres_movies=default_genres_movies,
                            recommendations=recommendations_movies,
                            recommendations_message=recommendations_message,
@@ -111,18 +132,29 @@ def index():
 def browse():
     """Browse page - Display all movies, support filtering by genre, search and pagination"""
     try:
+        # Get current user ID
+        current_user_id = get_current_user_id()
+        
         # Get user Cookie
         user_likes = request.cookies.get('user_likes')
+        user_dislikes = request.cookies.get('user_dislikes')
         if user_likes:
             user_likes = user_likes.split(",")
         else:
             user_likes = []
-        
-        user_dislikes = request.cookies.get('user_dislikes')
         if user_dislikes:
             user_dislikes = user_dislikes.split(",")
         else:
             user_dislikes = []
+        
+        # If Cookie is empty, load from CSV
+        if not user_likes and not user_dislikes:
+            user_likes_df = getUserLikesData(current_user_id)
+            if len(user_likes_df) > 0:
+                likes_list = user_likes_df[user_likes_df['action'] == 'like']['movieId'].tolist()
+                dislikes_list = user_likes_df[user_likes_df['action'] == 'dislike']['movieId'].tolist()
+                user_likes = [str(id) for id in likes_list]
+                user_dislikes = [str(id) for id in dislikes_list]
         
         # Get filter parameters
         selected_genre = request.args.get('genre', '')
