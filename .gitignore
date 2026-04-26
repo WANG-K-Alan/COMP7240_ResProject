@@ -26,3 +26,4 @@ build/
 *.log
 config.yaml
 *.DS_Store
+*.md

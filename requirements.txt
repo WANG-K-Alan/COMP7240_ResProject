@@ -48,7 +48,7 @@ requests==2.31.0
 rich==15.0.0
 safetensors==0.7.0
 scikit-learn==1.4.0
-scikit-surprise==1.1.3
+#scikit-surprise==1.1.3
 scipy==1.11.4
 shellingham==1.5.4
 six==1.16.0
@@ -67,3 +67,7 @@ tzdata==2023.3
 urllib3==2.1.0
 watchdog==3.0.0
 Werkzeug==3.0.1
+
+# pip install --upgrade setuptools wheel pyquery
+# conda install -c conda-forge scikit-surprise
+# pip install -r requirements.txt
