@@ -1,0 +1,7 @@
+deepseek:
+  api_key: "" # 替换为你的真实 API Key
+  model: "deepseek-chat"                   # 可选模型：deepseek-chat, deepseek-coder
+  base_url: "https://api.deepseek.com"     # 默认 API 地址
+  #调整生成参数
+  temperature: 0.5
+  max_tokens: 500
