@@ -127,15 +127,32 @@ def multi_recall(user_rates_df, all_rates_df, all_movies_df):
 # ------------------- 配置加载 ------------------
 def load_config():
     """
-    加载项目根目录下的 config.yaml 文件
-    返回配置字典
+    加载 DeepSeek API 配置
+    优先级：硬编码 > 环境变量 > config.yaml 文件
     """
-    # 优先从环境变量读取 DeepSeek API Key
+    # ============================================
+    # 方法1：直接在这里配置（最简单）
+    # ============================================
+    # 取消下面两行的注释，填入你的 API Key
+    # HARDCODED_API_KEY = "your-api-key-here"
+    # HARDCODED_MODEL = "deepseek-chat"
+    
+    # 如果设置了硬编码配置，直接返回
+    if 'HARDCODED_API_KEY' in locals() and HARDCODED_API_KEY:
+        return {
+            'deepseek': {
+                'api_key': HARDCODED_API_KEY,
+                'model': HARDCODED_MODEL
+            }
+        }
+    
+    # ============================================
+    # 方法2：从环境变量读取
+    # ============================================
     api_key = os.environ.get('DEEPSEEK_API_KEY')
     model = os.environ.get('DEEPSEEK_MODEL', 'deepseek-chat')
 
     if api_key:
-        # 使用环境变量配置
         return {
             'deepseek': {
                 'api_key': api_key,
@@ -143,14 +160,19 @@ def load_config():
             }
         }
 
-    # 回退到 本地config.yaml 文件配置
+    # ============================================
+    # 方法3：从 config.yaml 文件读取
+    # ============================================
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     config_path = os.path.join(base_dir, 'config.yaml')
 
     if not os.path.exists(config_path):
         raise FileNotFoundError(
-            "config.yaml 文件未找到。如需使用 DeepSeek 精排，请在项目根目录创建 config.yaml 并配置 API Key。\n"
-            "若仅测试功能，可忽略此提示，系统将自动回退至 User-CF 协同过滤排序。"
+            "DeepSeek API 配置未找到。请使用以下任一方法配置：\n"
+            "1. 在 pipeline.py 中取消注释 HARDCODED_API_KEY 并填入 API Key（推荐）\n"
+            "2. 设置环境变量：export DEEPSEEK_API_KEY='your-key'\n"
+            "3. 创建 config.yaml 文件\n"
+            "系统将自动回退至协同过滤排序。"
         )
     
     with open(config_path, 'r', encoding='utf-8') as f:
@@ -178,9 +200,19 @@ def rank_with_deepseek(candidates_dict, user_rates_df, movies_df, top_k=12, appl
         return [], "No candidates to rank."
     
     # ---------- 1. 加载配置 ----------
-    config = load_config()
-    api_key = config['deepseek']['api_key']
-    model = config['deepseek'].get('model', 'deepseek-chat')
+    try:
+        config = load_config()
+        api_key = config['deepseek']['api_key']
+        model = config['deepseek'].get('model', 'deepseek-chat')
+    except FileNotFoundError as e:
+        # 配置文件不存在，回退到协同过滤排序
+        print(f"[DeepSeek Warning] {e}")
+        print("[DeepSeek] Falling back to user_cf score ranking...")
+        candidate_ids = list(candidates_dict.keys())
+        sorted_ids = sorted(candidate_ids,
+                           key=lambda x: candidates_dict[x].get('user_cf_score', 0),
+                           reverse=True)[:top_k]
+        return sorted_ids, "Fallback: 配置文件未找到，使用协同过滤分数排序。"
     
     # ---------- 2. 构建用户画像 ----------
     high_rated = user_rates_df[user_rates_df['rating'] >= 4]['movieId'].tolist()

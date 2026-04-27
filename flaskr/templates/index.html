@@ -130,9 +130,20 @@
         {% if recommendations %}
         <section class="section pt-2 pb-0">
             <div class="container">
-                <p class="is-size-4">
-                    Recommended
-                </p>
+                <div class="is-flex is-align-items-center is-justify-content-space-between mb-2">
+                    <p class="is-size-4 mb-0">
+                        Recommended
+                    </p>
+                    <div class="field is-flex is-align-items-center">
+                        <label class="label mr-2 mb-0" style="font-size: 0.9rem; color: var(--primary-color);">
+                            <i class="fa fa-magic mr-1"></i>DeepSeek AI
+                        </label>
+                        <label class="switch">
+                            <input type="checkbox" v-model="useDeepSeek" @change="toggleDeepSeek">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
                 <p class="mb-3">{{ recommendations_message }}</p>
 
                 <div class="columns is-mobile is-multiline">
@@ -312,8 +323,9 @@
                     {% endfor %}
                 </div>
                 <footer class="modal-card-foot">
-                    <button class="button is-link" :disabled="genres.length == 0" @click="saveGenres">Apply Filter
+                    <button class="button is-link" @click="saveGenres">Apply Filter
                     </button>
+                    <button class="button" @click="showGenres = false">Cancel</button>
                 </footer>
             </div>
         </div>
@@ -634,6 +646,16 @@
                 location.reload()
             }
 
+            // ==== DeepSeek Toggle ====
+            const useDeepSeek = ref({{ 'true' if use_deepseek else 'false' }})
+
+            function toggleDeepSeek() {
+                // Save to cookie
+                document.cookie = "use_deepseek=" + (useDeepSeek.value ? "1" : "0") + "; path=/; max-age=31536000"
+                // Reload page to apply changes
+                location.reload()
+            }
+
             // ==== Movie Data ====
             const recommendationsData = ref({{ recommendations | tojson if recommendations else '[]' }})
             const likesSimilarsData = ref({{ likes_similars | tojson if likes_similars else '[]' }})
@@ -749,6 +771,7 @@
                 }
                 document.cookie = "user_genres=" + genres.value;
                 document.cookie = "user_rates=; Max-Age=0";
+                showGenres.value = false;  // 关闭modal
                 reloadPage()
             }
 
@@ -1038,6 +1061,10 @@
                 // User ID
                 currentUserId,
                 switchUser,
+
+                // DeepSeek Toggle
+                useDeepSeek,
+                toggleDeepSeek,
 
                 recommendationsData,
                 likesSimilarsData,

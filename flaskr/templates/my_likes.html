@@ -155,6 +155,7 @@
                             <div class="card-header p-2" @click.stop>
                                 <label class="checkbox">
                                     <input type="checkbox" 
+                                           name="selected_movies"
                                            v-model="selectedMovies"
                                            :value="{{ movie['movieId'] }}">
                                     <span class="ml-2">Select</span>
@@ -460,7 +461,7 @@
 </div>
 
 <script type="module">
-    import {createApp, onMounted, ref} from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+    import {createApp, onMounted, ref, watch} from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
 
     let app = createApp({
         setup() {
@@ -498,6 +499,18 @@
                 isLoading.value = false
                 // Load user data from server
                 await loadUserData()
+            })
+            
+            // Watch selectedMovies to update selectAll state
+            watch(selectedMovies, (newVal) => {
+                const checkboxes = document.querySelectorAll('input[name="selected_movies"]')
+                const totalCheckboxes = checkboxes.length
+                
+                if (totalCheckboxes > 0) {
+                    // If all checkboxes are selected, set selectAll to true
+                    // Otherwise, set to false
+                    selectAll.value = (newVal.length === totalCheckboxes && newVal.length > 0)
+                }
             })
             
             // Load user data from server

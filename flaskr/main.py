@@ -38,6 +38,10 @@ def index():
     # Get current user ID
     current_user_id = get_current_user_id()
     
+    # Get DeepSeek toggle setting from Cookie (default: enabled)
+    use_deepseek = request.cookies.get('use_deepseek', '1')
+    use_deepseek = (use_deepseek == '1')
+    
     # Load user data from CSV if Cookie is empty
     user_rates = request.cookies.get('user_rates')
     if user_rates:
@@ -77,7 +81,8 @@ def index():
     default_genres_movies = getMoviesByGenres(user_genres)[:10]
     
     # Get recommendations (requires ratings) - not limited by genres
-    recommendations_movies, recommendations_message = getRecommendationBy(user_rates)
+    # Pass use_deepseek parameter to control whether to use DeepSeek AI ranking
+    recommendations_movies, recommendations_message = getRecommendationBy(user_rates, use_deepseek=use_deepseek)
     
     # Get similar movies and likes list - not limited by genres
     likes_similar_movies, likes_similar_message = getLikedSimilarBy([int(numeric_string) for numeric_string in user_likes], [int(numeric_string) for numeric_string in user_dislikes])
@@ -119,6 +124,7 @@ def index():
                            user_likes=user_likes,
                            user_dislikes=user_dislikes,
                            current_user_id=current_user_id,
+                           use_deepseek=use_deepseek,
                            default_genres_movies=default_genres_movies,
                            recommendations=recommendations_movies,
                            recommendations_message=recommendations_message,
@@ -388,7 +394,17 @@ def getMoviesByGenres(user_genres):
     return results
 
 # Modify this function
-def getRecommendationBy(user_rates):
+def getRecommendationBy(user_rates, use_deepseek=True):
+    """
+    Get movie recommendations based on user ratings
+    
+    Parameters:
+        user_rates: User rating list
+        use_deepseek: Whether to use DeepSeek AI ranking (default: True)
+    
+    Returns:
+        (results, message): Recommendation results and message
+    """
     results = []
     message = "No recommendations."
     
@@ -400,16 +416,29 @@ def getRecommendationBy(user_rates):
         candidates_dict = pipeline.multi_recall(user_rates_df, rates, movies)
         
         if candidates_dict:
-            # DeepSeek 精排
-            ranked_ids, reasoning = pipeline.rank_with_deepseek(
-                candidates_dict, user_rates_df, movies, top_k=12, apply_rerank=True
-            )
-            
-            if ranked_ids:
-                results = movies[movies['movieId'].isin(ranked_ids)]
-                # 保持 DeepSeek 返回的顺序
-                results = results.set_index('movieId').loc[ranked_ids].reset_index()
-                message = f"DeepSeek AI Recommendation: {reasoning}"
+            if use_deepseek:
+                # DeepSeek AI 精排
+                ranked_ids, reasoning = pipeline.rank_with_deepseek(
+                    candidates_dict, user_rates_df, movies, top_k=12, apply_rerank=True
+                )
+                
+                if ranked_ids:
+                    results = movies[movies['movieId'].isin(ranked_ids)]
+                    # 保持 DeepSeek 返回的顺序
+                    results = results.set_index('movieId').loc[ranked_ids].reset_index()
+                    message = f"DeepSeek AI Recommendation: {reasoning}"
+            else:
+                # 使用 User-CF 分数排序（不使用DeepSeek）
+                candidate_ids = list(candidates_dict.keys())
+                sorted_ids = sorted(candidate_ids,
+                                   key=lambda x: candidates_dict[x].get('user_cf_score', 0),
+                                   reverse=True)[:12]
+                
+                if sorted_ids:
+                    results = movies[movies['movieId'].isin(sorted_ids)]
+                    # 保持排序顺序
+                    results = results.set_index('movieId').loc[sorted_ids].reset_index()
+                    message = "Collaborative Filtering Recommendation: Based on similar users' preferences."
     
     if len(results) > 0:
         return results.to_dict('records'), message
